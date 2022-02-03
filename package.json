@@ -1,0 +1,19 @@
+{
+  "name": "o3swap-v2-core",
+  "version": "1.0.0",
+  "description": "O3Swap V2 Core",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "O3Labs",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.4.2",
+    "@truffle/hdwallet-provider": "^1.5.0",
+    "bignumber.js": "^9.0.1",
+    "web3": "^1.7.0"
+  },
+  "devDependencies": {
+    "truffle-plugin-verify": "^0.5.15"
+  }
+}
