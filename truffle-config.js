@@ -159,6 +159,7 @@ const network_development = {
  module.exports = {
   networks: {
     development_pool: network_development,
+    development_ptoken: network_development,
   },
 
   mocha: {
