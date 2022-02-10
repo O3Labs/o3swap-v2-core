@@ -8,7 +8,7 @@ import "../access/Ownable.sol";
 import "./interfaces/IPool.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Pool is IPool {
+contract Pool is IPool, Ownable {
     using SafeERC20 for IERC20;
     using MathUtils for uint256;
 
@@ -69,7 +69,6 @@ contract Pool is IPool {
 
     event NewAdminFee(uint256 newAdminFee);
     event NewSwapFee(uint256 newSwapFee);
-    event NewWithdrawFee(uint256 newWithdrawFee);
 
     event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
     event StopRampA(uint256 currentA, uint256 time);
@@ -110,8 +109,8 @@ contract Pool is IPool {
 
     uint256 public constant A_PRECISION = 100;
     uint256 public constant MAX_A = 10**6;
-    uint256 private constant MAX_A_CHANGE = 2;
-    uint256 private constant MIN_RAMP_TIME = 14 days;
+    uint256 private constant MAX_A_CHANGE = 10;
+    uint256 private constant MIN_RAMP_TIME = 1 days;
 
     constructor(
         IERC20[] memory _pooledTokens,
@@ -441,7 +440,7 @@ contract Pool is IPool {
         uint256 dyAdminFee = dyFee * adminFee / FEE_DENOMINATOR / tokenPrecisionMultipliers[tokenIndexTo];
 
         balances[tokenIndexFrom] += transferredDx;
-        balances[tokenIndexTo] -= dy - dyAdminFee;
+        balances[tokenIndexTo] = balances[tokenIndexTo] - dy - dyAdminFee;
 
         coins[tokenIndexTo].safeTransfer(msg.sender, dy);
 
@@ -600,5 +599,64 @@ contract Pool is IPool {
         emit RemoveLiquidityImbalance(msg.sender, amounts, fees, v.d1, tokenSupply - tokenAmount);
 
         return tokenAmount;
+    }
+
+    function applySwapFee(uint256 newSwapFee) external onlyOwner {
+        require(newSwapFee <= MAX_SWAP_FEE, "O3SwapPool: swap fee exceeds maximum");
+        swapFee = newSwapFee;
+
+        emit NewSwapFee(newSwapFee);
+    }
+
+    function applyAdminFee(uint256 newAdminFee) external onlyOwner {
+        require(newAdminFee <= MAX_ADMIN_FEE, "O3SwapPool: admin fee exceeds maximum");
+        adminFee = newAdminFee;
+
+        emit NewAdminFee(newAdminFee);
+    }
+
+    function withdrawAdminFee(address receiver) external onlyOwner {
+        for (uint256 i = 0; i < coins.length; i++) {
+            IERC20 token = coins[i];
+            uint256 balance = token.balanceOf(address(this)) - balances[i];
+            if (balance > 0) {
+                token.safeTransfer(receiver, balance);
+            }
+        }
+    }
+
+    function rampA(uint256 _futureA, uint256 _futureTime) external onlyOwner {
+        require(block.timestamp >= initialATime + MIN_RAMP_TIME, "O3SwapPool: at least 1 day before new ramp");
+        require(_futureTime >= block.timestamp + MIN_RAMP_TIME, "O3SwapPool: insufficient ramp time");
+        require(_futureA > 0 && _futureA < MAX_A, "O3SwapPool: futureA must in range (0, MAX_A)");
+
+        uint256 initialAPrecise = _getAPrecise();
+        uint256 futureAPrecise = _futureA * A_PRECISION;
+
+        if (futureAPrecise < initialAPrecise) {
+            require(futureAPrecise * MAX_A_CHANGE >= initialAPrecise, "O3SwapPool: futureA too small");
+        } else {
+            require(futureAPrecise <= initialAPrecise * MAX_A_CHANGE, "O3SwapPool: futureA too large");
+        }
+
+        initialA = initialAPrecise;
+        futureA = futureAPrecise;
+        initialATime = block.timestamp;
+        futureATime = _futureTime;
+
+        emit RampA(initialAPrecise, futureAPrecise, block.timestamp, _futureTime);
+    }
+
+    function stopRampA() external onlyOwner {
+        require(futureATime > block.timestamp, "O3SwapPool: ramp already stopped");
+
+        uint256 currentA = _getAPrecise();
+
+        initialA = currentA;
+        futureA = currentA;
+        initialATime = block.timestamp;
+        futureATime = block.timestamp;
+
+        emit StopRampA(currentA, block.timestamp);
     }
 }

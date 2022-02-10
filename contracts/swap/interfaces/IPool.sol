@@ -8,7 +8,6 @@ interface IPool {
     function getA() external view returns (uint256);
 
     function getVirtualPrice() external view returns (uint256);
-    function getAdminBalance(uint256 index) external view returns (uint256);
 
     function calculateSwap(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx) external view returns (uint256);
     function calculateRemoveLiquidity(uint256 amount) external view returns (uint256[] memory);
@@ -20,4 +19,11 @@ interface IPool {
     function removeLiquidity(uint256 amount, uint256[] calldata minAmounts, uint256 deadline) external returns (uint256[] memory);
     function removeLiquidityOneToken(uint256 tokenAmount, uint8 tokenIndex, uint256 minAmount, uint256 deadline) external returns (uint256);
     function removeLiquidityImbalance(uint256[] calldata amounts, uint256 maxBurnAmount, uint256 deadline) external returns (uint256);
+
+    function applySwapFee(uint256 newSwapFee) external;
+    function applyAdminFee(uint256 newAdminFee) external;
+    function getAdminBalance(uint256 index) external view returns (uint256);
+    function withdrawAdminFee(address receiver) external;
+    function rampA(uint256 _futureA, uint256 _futureTime) external;
+    function stopRampA() external;
 }

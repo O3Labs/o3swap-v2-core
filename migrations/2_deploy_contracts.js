@@ -10,9 +10,11 @@ module.exports = function (deployer, network, accounts) {
 
             // Fill required parameters before deploy.
             deployer.deploy(Pool);
+            break;
 
         case "development_ptoken":
             // Fill required parameters before deploy.
             deployer.deploy(PToken);
+            break;
     }
 }
