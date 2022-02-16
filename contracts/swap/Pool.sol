@@ -67,8 +67,8 @@ contract Pool is IPool, Ownable {
         uint256 lpTokenSupply
     );
 
-    event NewAdminFee(uint256 newAdminFee);
     event NewSwapFee(uint256 newSwapFee);
+    event NewAdminFee(uint256 newAdminFee);
 
     event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
     event StopRampA(uint256 currentA, uint256 time);
@@ -96,7 +96,6 @@ contract Pool is IPool, Ownable {
         uint256 preciseA;
     }
 
-    uint8 private constant POOL_PRECISION_DECIMALS = 18;
     uint256 private constant FEE_DENOMINATOR = 10**10;
 
     // feeAmount = amount * fee / FEE_DENOMINATOR, 1% max.
@@ -113,39 +112,39 @@ contract Pool is IPool, Ownable {
     uint256 private constant MIN_RAMP_TIME = 1 days;
 
     constructor(
-        IERC20[] memory _pooledTokens,
+        IERC20[] memory _coins,
         uint8[] memory decimals,
         string memory lpTokenName,
         string memory lpTokenSymbol,
         uint256 _a,
-        uint256 _fee,
+        uint256 _swapFee,
         uint256 _adminFee
     ) {
-        require(_pooledTokens.length >= 2, "O3SwapPool: poolToken.length out of range(<2)");
-        require(_pooledTokens.length <= 8, "O3SwapPool: poolToken.length out of range(>8");
-        require(_pooledTokens.length == decimals.length, "O3SwapPool: invalid decimals length");
+        require(_coins.length >= 2, "O3SwapPool: coins.length out of range(<2)");
+        require(_coins.length <= 8, "O3SwapPool: coins.length out of range(>8");
+        require(_coins.length == decimals.length, "O3SwapPool: invalid decimals length");
 
         uint256[] memory precisionMultipliers = new uint256[](decimals.length);
 
-        for (uint8 i = 0; i < _pooledTokens.length; i++) {
-            require(address(_pooledTokens[i]) != address(0), "O3SwapPool: pool token address cannot be zero");
-            require(decimals[i] <= POOL_PRECISION_DECIMALS, "O3SwapPool: pool token decimal exceeds maximum");
-            precisionMultipliers[i] = 10 ** (uint256(POOL_PRECISION_DECIMALS) - uint256(decimals[i]));
+        for (uint8 i = 0; i < _coins.length; i++) {
+            require(address(_coins[i]) != address(0), "O3SwapPool: token address cannot be zero");
+            require(decimals[i] <= 18, "O3SwapPool: token decimal exceeds maximum");
+            precisionMultipliers[i] = 10 ** (18 - uint256(decimals[i]));
         }
 
         require(_a < MAX_A, "O3SwapPool: _a exceeds maximum");
-        require(_fee < MAX_SWAP_FEE, "O3SwapPool: _fee exceeds maximum");
-        require(_adminFee < MAX_ADMIN_FEE, "O3SwapPool: _adminFee exceeds maximum");
+        require(_swapFee <= MAX_SWAP_FEE, "O3SwapPool: _swapFee exceeds maximum");
+        require(_adminFee <= MAX_ADMIN_FEE, "O3SwapPool: _adminFee exceeds maximum");
 
-        coins = _pooledTokens;
+        coins = _coins;
         lpToken = new LPToken(lpTokenName, lpTokenSymbol);
         tokenPrecisionMultipliers = precisionMultipliers;
-        balances = new uint256[](_pooledTokens.length);
+        balances = new uint256[](_coins.length);
         initialA = _a * A_PRECISION;
         futureA = _a * A_PRECISION;
         initialATime = 0;
         futureATime = 0;
-        swapFee = _fee;
+        swapFee = _swapFee;
         adminFee = _adminFee;
     }
 
@@ -187,7 +186,7 @@ contract Pool is IPool, Ownable {
             return 0;
         }
 
-        return d * (10**uint256(ERC20(lpToken).decimals())) / totalSupply;
+        return d * 10**18 / totalSupply;
     }
 
     function calculateWithdrawOneToken(uint256 tokenAmount, uint8 tokenIndex) external view returns (uint256 amount) {
@@ -294,7 +293,7 @@ contract Pool is IPool, Ownable {
             }
         }
 
-        revert("D does not converge");
+        revert("D did not converge");
     }
 
     function getD() internal view returns (uint256) {
@@ -310,6 +309,7 @@ contract Pool is IPool, Ownable {
         for (uint256 i = 0; i < numTokens; i++) {
             xp[i] = _balances[i] * precisionMultipliers[i];
         }
+
         return xp;
     }
 
@@ -385,9 +385,10 @@ contract Pool is IPool, Ownable {
         uint256 totalSupply = lpToken.totalSupply();
         require(amount <= totalSupply, "O3SwapPool: WITHDRAW_AMOUNT_EXCEEDS_AVAILABLE");
 
-        uint256[] memory amounts = new uint256[](coins.length);
+        uint256 numTokens = coins.length;
+        uint256[] memory amounts = new uint256[](numTokens);
 
-        for (uint256 i = 0; i < coins.length; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             amounts[i] = balances[i] * amount / totalSupply;
         }
 
@@ -440,7 +441,7 @@ contract Pool is IPool, Ownable {
         uint256 dyAdminFee = dyFee * adminFee / FEE_DENOMINATOR / tokenPrecisionMultipliers[tokenIndexTo];
 
         balances[tokenIndexFrom] += transferredDx;
-        balances[tokenIndexTo] = balances[tokenIndexTo] - dy - dyAdminFee;
+        balances[tokenIndexTo] -= dy + dyAdminFee;
 
         coins[tokenIndexTo].safeTransfer(msg.sender, dy);
 
@@ -488,7 +489,7 @@ contract Pool is IPool, Ownable {
                 uint256 idealBalance = v.d1 * balances[i] / v.d0;
                 fees[i] = feePerToken * idealBalance.difference(newBalances[i]) / FEE_DENOMINATOR;
                 balances[i] = newBalances[i] - (fees[i] * adminFee / FEE_DENOMINATOR);
-                newBalances[i] = newBalances[i] - fees[i];
+                newBalances[i] -= fees[i];
             }
             v.d2 = getD(_xp(newBalances), v.preciseA);
         } else {
@@ -531,7 +532,6 @@ contract Pool is IPool, Ownable {
     }
 
     function removeLiquidityOneToken(uint256 tokenAmount, uint8 tokenIndex, uint256 minAmount, uint256 deadline) external ensure(deadline) returns (uint256) {
-        uint256 totalSupply = lpToken.totalSupply();
         uint256 numTokens = coins.length;
 
         require(tokenAmount <= lpToken.balanceOf(msg.sender), "O3SwapPool: INSUFFICIENT_LP_AMOUNT");
@@ -548,12 +548,12 @@ contract Pool is IPool, Ownable {
         lpToken.burnFrom(msg.sender, tokenAmount);
         coins[tokenIndex].safeTransfer(msg.sender, dy);
 
-        emit RemoveLiquidityOne(msg.sender, tokenAmount, totalSupply, tokenIndex, dy);
+        emit RemoveLiquidityOne(msg.sender, tokenAmount, lpToken.totalSupply(), tokenIndex, dy);
 
         return dy;
     }
 
-    function removeLiquidityImbalance(uint256[] memory amounts, uint256 maxBurnAmount, uint256 deadline) external ensure(deadline) returns (uint256) {
+    function removeLiquidityImbalance(uint256[] calldata amounts, uint256 maxBurnAmount, uint256 deadline) external ensure(deadline) returns (uint256) {
         require(amounts.length == coins.length, "O3SwapPool: AMOUNTS_COINS_LENGTH_MISMATCH");
         require(maxBurnAmount <= lpToken.balanceOf(msg.sender) && maxBurnAmount != 0, "O3SwapPool: INSUFFICIENT_LP_AMOUNT");
 
@@ -564,25 +564,25 @@ contract Pool is IPool, Ownable {
         v.preciseA = _getAPrecise();
         v.d0 = getD(_xp(), v.preciseA);
 
-        uint256[] memory balances1 = balances;
+        uint256[] memory newBalances = balances;
 
         for (uint256 i = 0; i < coins.length; i++) {
-            balances1[i] = balances1[i] - amounts[i];
+            newBalances[i] -= amounts[i];
         }
 
-        v.d1 = getD(_xp(balances1), v.preciseA);
+        v.d1 = getD(_xp(newBalances), v.preciseA);
 
         uint256[] memory fees = new uint256[](coins.length);
 
         for (uint256 i = 0; i < coins.length; i++) {
             uint256 idealBalance = v.d1 * balances[i] / v.d0;
-            uint256 difference = idealBalance.difference(balances1[i]);
+            uint256 difference = idealBalance.difference(newBalances[i]);
             fees[i] = feePerToken * difference / FEE_DENOMINATOR;
-            balances[i] = balances1[i] - (fees[i] * adminFee / FEE_DENOMINATOR);
-            balances1[i] -= fees[i];
+            balances[i] = newBalances[i] - (fees[i] * adminFee / FEE_DENOMINATOR);
+            newBalances[i] -= fees[i];
         }
 
-        v.d2 = getD(_xp(balances1), v.preciseA);
+        v.d2 = getD(_xp(newBalances), v.preciseA);
 
         uint256 tokenAmount = (v.d0 - v.d2) * tokenSupply / v.d0;
         require(tokenAmount != 0, "O3SwapPool: BURNT_LP_AMOUNT_CANNOT_BE_ZERO");

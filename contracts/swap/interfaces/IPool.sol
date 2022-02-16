@@ -9,7 +9,7 @@ interface IPool {
 
     function getVirtualPrice() external view returns (uint256);
 
-    function calculateSwap(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx) external view returns (uint256);
+    function calculateSwap(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx) external view returns (uint256 dy);
     function calculateRemoveLiquidity(uint256 amount) external view returns (uint256[] memory);
     function calculateTokenAmount(uint256[] calldata amounts, bool deposit) external view returns (uint256);
     function calculateWithdrawOneToken(uint256 tokenAmount, uint8 tokenIndex) external view returns (uint256 amount);
