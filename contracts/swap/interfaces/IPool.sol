@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 interface IPool {
     function getA() external view returns (uint256);
+    function getTokenIndex(address token) external view returns (uint8);
 
     function getVirtualPrice() external view returns (uint256);
 

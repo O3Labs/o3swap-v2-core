@@ -24,6 +24,7 @@ contract Pool is IPool, Ownable {
     LPToken public lpToken;
 
     IERC20[] public coins;
+    mapping(address => uint8) private coinIndexes;
     uint256[] tokenPrecisionMultipliers;
 
     uint256[] public balances;
@@ -129,7 +130,13 @@ contract Pool is IPool, Ownable {
         for (uint8 i = 0; i < _coins.length; i++) {
             require(address(_coins[i]) != address(0), "O3SwapPool: token address cannot be zero");
             require(decimals[i] <= 18, "O3SwapPool: token decimal exceeds maximum");
+
+            if (i > 0) {
+                require(coinIndexes[address(_coins[i])] == 0 && _coins[0] != _coins[i], "O3SwapPool: duplicated token pooled");
+            }
+
             precisionMultipliers[i] = 10 ** (18 - uint256(decimals[i]));
+            coinIndexes[address(_coins[i])] = i;
         }
 
         require(_a < MAX_A, "O3SwapPool: _a exceeds maximum");
@@ -151,6 +158,12 @@ contract Pool is IPool, Ownable {
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, 'O3SwapPool: EXPIRED');
         _;
+    }
+
+    function getTokenIndex(address token) external view returns (uint8) {
+        uint8 index = coinIndexes[token];
+        require(address(coins[index]) == token, "O3SwapPool: TOKEN_NOT_POOLED");
+        return index;
     }
 
     function getA() external view returns (uint256) {
@@ -179,7 +192,7 @@ contract Pool is IPool, Ownable {
     }
 
     function getVirtualPrice() external view returns (uint256) {
-        uint256 d = getD(_xp(), _getAPrecise());
+        uint256 d = _getD(_xp(), _getAPrecise());
         uint256 totalSupply = lpToken.totalSupply();
 
         if (totalSupply == 0) {
@@ -197,25 +210,25 @@ contract Pool is IPool, Ownable {
         uint256 dy;
         uint256 newY;
 
-        (dy, newY) = calculateWithdrawOneTokenDY(tokenIndex, tokenAmount);
+        (dy, newY) = _calculateWithdrawOneTokenDY(tokenIndex, tokenAmount);
         uint256 dySwapFee = (_xp()[tokenIndex] - newY) / tokenPrecisionMultipliers[tokenIndex] - dy;
 
         return (dy, dySwapFee);
     }
 
-    function calculateWithdrawOneTokenDY(uint8 tokenIndex, uint256 tokenAmount) internal view returns (uint256, uint256) {
+    function _calculateWithdrawOneTokenDY(uint8 tokenIndex, uint256 tokenAmount) internal view returns (uint256, uint256) {
         require(tokenIndex < coins.length, "O3SwapPool: TOKEN_INDEX_OUT_OF_RANGE");
 
         CalculateWithdrawOneTokenDYInfo memory v = CalculateWithdrawOneTokenDYInfo(0, 0, 0, 0, 0);
         v.preciseA = _getAPrecise();
         v.feePerToken = _feePerToken();
         uint256[] memory xp = _xp();
-        v.d0 = getD(xp, v.preciseA);
+        v.d0 = _getD(xp, v.preciseA);
         v.d1 = v.d0 - tokenAmount * v.d0 / lpToken.totalSupply();
 
         require(tokenAmount <= xp[tokenIndex], "O3SwapPool: WITHDRAW_AMOUNT_EXCEEDS_AVAILABLE");
 
-        v.newY = getYD(v.preciseA, tokenIndex, xp, v.d1);
+        v.newY = _getYD(v.preciseA, tokenIndex, xp, v.d1);
 
         uint256[] memory xpReduced = new uint256[](xp.length);
 
@@ -228,13 +241,13 @@ contract Pool is IPool, Ownable {
             );
         }
 
-        uint256 dy = xpReduced[tokenIndex] - getYD(v.preciseA, tokenIndex, xpReduced, v.d1);
+        uint256 dy = xpReduced[tokenIndex] - _getYD(v.preciseA, tokenIndex, xpReduced, v.d1);
         dy = (dy - 1) / tokenPrecisionMultipliers[tokenIndex];
 
         return (dy, v.newY);
     }
 
-    function getYD(uint256 a, uint8 tokenIndex, uint256[] memory xp, uint256 d) internal pure returns (uint256) {
+    function _getYD(uint256 a, uint8 tokenIndex, uint256[] memory xp, uint256 d) internal pure returns (uint256) {
         uint256 numTokens = xp.length;
         require(tokenIndex < numTokens, "O3SwapPool: TOKEN_INDEX_OUT_OF_RANGE");
 
@@ -265,7 +278,7 @@ contract Pool is IPool, Ownable {
         revert("Approximation did not converge");
     }
 
-    function getD(uint256[] memory xp, uint256 a) internal pure returns (uint256) {
+    function _getD(uint256[] memory xp, uint256 a) internal pure returns (uint256) {
         uint256 numTokens = xp.length;
         uint256 s;
 
@@ -296,18 +309,18 @@ contract Pool is IPool, Ownable {
         revert("D did not converge");
     }
 
-    function getD() internal view returns (uint256) {
-        return getD(_xp(), _getAPrecise());
+    function _getD() internal view returns (uint256) {
+        return _getD(_xp(), _getAPrecise());
     }
 
-    function _xp(uint256[] memory _balances, uint256[] memory precisionMultipliers) internal pure returns (uint256[] memory) {
+    function _xp(uint256[] memory _balances, uint256[] memory _precisionMultipliers) internal pure returns (uint256[] memory) {
         uint256 numTokens = _balances.length;
-        require(numTokens == precisionMultipliers.length, "O3SwapPool: BALANCES_MULTIPLIERS_LENGTH_MISMATCH");
+        require(numTokens == _precisionMultipliers.length, "O3SwapPool: BALANCES_MULTIPLIERS_LENGTH_MISMATCH");
 
         uint256[] memory xp = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
-            xp[i] = _balances[i] * precisionMultipliers[i];
+            xp[i] = _balances[i] * _precisionMultipliers[i];
         }
 
         return xp;
@@ -321,14 +334,14 @@ contract Pool is IPool, Ownable {
         return _xp(balances, tokenPrecisionMultipliers);
     }
 
-    function getY(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 x, uint256[] memory xp) internal view returns (uint256) {
+    function _getY(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 x, uint256[] memory xp) internal view returns (uint256) {
         uint256 numTokens = coins.length;
 
         require(tokenIndexFrom != tokenIndexTo, "O3SwapPool: DUPLICATED_TOKEN_INDEX");
         require(tokenIndexFrom < numTokens && tokenIndexTo < numTokens, "O3SwapPool: TOKEN_INDEX_OUT_OF_RANGE");
 
         uint256 a = _getAPrecise();
-        uint256 d = getD(xp, a);
+        uint256 d = _getD(xp, a);
         uint256 nA = numTokens * a;
         uint256 c = d;
         uint256 s;
@@ -371,7 +384,7 @@ contract Pool is IPool, Ownable {
         require(tokenIndexFrom < xp.length && tokenIndexTo < xp.length, "O3SwapPool: TOKEN_INDEX_OUT_OF_RANGE");
 
         uint256 x = xp[tokenIndexFrom] + dx * tokenPrecisionMultipliers[tokenIndexFrom];
-        uint256 y = getY(tokenIndexFrom, tokenIndexTo, x, xp);
+        uint256 y = _getY(tokenIndexFrom, tokenIndexTo, x, xp);
         dy = xp[tokenIndexTo] - y - 1;
         dyFee = dy * swapFee / FEE_DENOMINATOR;
         dy = (dy - dyFee) / tokenPrecisionMultipliers[tokenIndexTo];
@@ -399,7 +412,7 @@ contract Pool is IPool, Ownable {
         uint256 numTokens = coins.length;
         uint256 a = _getAPrecise();
         uint256[] memory _balances = balances;
-        uint256 d0 = getD(_xp(balances), a);
+        uint256 d0 = _getD(_xp(balances), a);
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (deposit) {
@@ -409,7 +422,7 @@ contract Pool is IPool, Ownable {
             }
         }
 
-        uint256 d1 = getD(_xp(_balances), a);
+        uint256 d1 = _getD(_xp(_balances), a);
         uint256 totalSupply = lpToken.totalSupply();
 
         if (deposit) {
@@ -459,7 +472,7 @@ contract Pool is IPool, Ownable {
         uint256 totalSupply = lpToken.totalSupply();
 
         if (totalSupply != 0) {
-            v.d0 = getD();
+            v.d0 = _getD();
         }
         uint256[] memory newBalances = balances;
 
@@ -478,7 +491,7 @@ contract Pool is IPool, Ownable {
         }
 
         v.preciseA = _getAPrecise();
-        v.d1 = getD(_xp(newBalances), v.preciseA);
+        v.d1 = _getD(_xp(newBalances), v.preciseA);
         require(v.d1 > v.d0, "O3SwapPool: INVALID_OPERATION_D_MUST_INCREASE");
 
         // updated to reflect fees and calculate the user's LP tokens
@@ -491,7 +504,7 @@ contract Pool is IPool, Ownable {
                 balances[i] = newBalances[i] - (fees[i] * adminFee / FEE_DENOMINATOR);
                 newBalances[i] -= fees[i];
             }
-            v.d2 = getD(_xp(newBalances), v.preciseA);
+            v.d2 = _getD(_xp(newBalances), v.preciseA);
         } else {
             balances = newBalances;
         }
@@ -562,7 +575,7 @@ contract Pool is IPool, Ownable {
         uint256 tokenSupply = lpToken.totalSupply();
         uint256 feePerToken = _feePerToken();
         v.preciseA = _getAPrecise();
-        v.d0 = getD(_xp(), v.preciseA);
+        v.d0 = _getD(_xp(), v.preciseA);
 
         uint256[] memory newBalances = balances;
 
@@ -570,7 +583,7 @@ contract Pool is IPool, Ownable {
             newBalances[i] -= amounts[i];
         }
 
-        v.d1 = getD(_xp(newBalances), v.preciseA);
+        v.d1 = _getD(_xp(newBalances), v.preciseA);
 
         uint256[] memory fees = new uint256[](coins.length);
 
@@ -582,7 +595,7 @@ contract Pool is IPool, Ownable {
             newBalances[i] -= fees[i];
         }
 
-        v.d2 = getD(_xp(newBalances), v.preciseA);
+        v.d2 = _getD(_xp(newBalances), v.preciseA);
 
         uint256 tokenAmount = (v.d0 - v.d2) * tokenSupply / v.d0;
         require(tokenAmount != 0, "O3SwapPool: BURNT_LP_AMOUNT_CANNOT_BE_ZERO");
