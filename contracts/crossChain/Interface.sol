@@ -13,8 +13,17 @@ interface ICallProxy {
 }
 
 interface IPToken {
-
     function mint(address to, uint256 amount) external;
-
     function burn(uint256 amount) external;
+}
+
+interface IBridge {
+    function bridgeOut(
+        address fromAssetHash, 
+        uint64 toChainId, 
+        bytes memory toAddress, 
+        uint256 amount,
+        bytes memory callee,
+        bytes memory callData
+    ) external returns(bool); 
 }

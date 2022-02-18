@@ -19,8 +19,8 @@ contract CallProxy is ICallProxy {
         IERC20 token = IERC20(ptoken);
         address toContract = Utils.bytesToAddress(callee);
         token.approve(toContract, amount);
-        (bool success) = toContract.call(callData);
+        toContract.call(callData);
         token.safeTransfer(receiver, token.balanceOf(address(this)));
-        return success;
+        return true;
     }
 }

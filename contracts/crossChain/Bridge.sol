@@ -1,13 +1,13 @@
 pragma solidity ^0.8.0;
 
-import "../access/Ownable.sol";
 import "./Interface.sol";
 import "./Utils.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract Bridge is Ownable {
+contract Bridge is Ownable, IBridge {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
@@ -108,7 +108,7 @@ contract Bridge is Ownable {
         uint256 amount,
         bytes memory callee,
         bytes memory callData
-    ) public returns(bool) {
+    ) public override returns(bool) {
         require(amount != 0, "amount cannot be zero!");
         
         // check if bridge fee is required
