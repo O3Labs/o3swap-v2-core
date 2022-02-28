@@ -82,7 +82,10 @@ contract CallProxy is ICallProxy, Ownable {
         } else { /* unknown tag, do nothing */ }
 
         // transfer the remaining ptoken to receiver
-        IERC20(ptoken).transfer(receiver, IERC20(ptoken).balanceOf(address(this)));
+        uint256 balance = IERC20(ptoken).balanceOf(address(this));
+        if (balance != 0) {
+            IERC20(ptoken).transfer(receiver, balance);
+        }
         return true;
     }
 
