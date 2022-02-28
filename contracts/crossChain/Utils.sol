@@ -214,7 +214,7 @@ library Utils {
     function NextVarBytes(bytes memory buff, uint256 offset) internal pure returns(bytes memory, uint256) {
         uint len;
         (len, offset) = NextVarUint(buff, offset);
-        require(offset + len <= buff.length && offset < offset + len, "NextVarBytes, offset exceeds maximum");
+        require(offset + len <= buff.length && offset <= offset + len, "NextVarBytes, offset exceeds maximum");
         bytes memory tempBytes;
         assembly{
             switch iszero(len)

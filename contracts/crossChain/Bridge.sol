@@ -15,7 +15,6 @@ contract Bridge is Ownable, IBridge {
         bytes toAssetHash;
         bytes toAddress;
         uint256 amount;
-        bytes callee;
         bytes callData;
     }
 
@@ -35,8 +34,8 @@ contract Bridge is Ownable, IBridge {
     event BindAssetEvent(address fromAssetHash, uint64 toChainId, bytes targetProxyHash);
     event UnlockEvent(address toAssetHash, address toAddress, uint256 amount);
     event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);
-    event BirdgeInEvent(address toAssetHash, address toAddress, uint256 amount, address callProxy, bytes callee, bytes callData);
-    event BridgeOutEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount, uint256 fee, bytes callee, bytes callData);
+    event BirdgeInEvent(address toAssetHash, address toAddress, uint256 amount, address callProxy, bytes callData);
+    event BridgeOutEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount, uint256 fee, bytes callData);
     
     modifier onlyManagerContract() {
         IEthCrossChainManagerProxy ieccmp = IEthCrossChainManagerProxy(managerProxyContract);
@@ -106,7 +105,6 @@ contract Bridge is Ownable, IBridge {
         uint64 toChainId, 
         bytes memory toAddress, 
         uint256 amount,
-        bytes memory callee,
         bytes memory callData
     ) public override returns(bool) {
         require(amount != 0, "amount cannot be zero!");
@@ -131,7 +129,6 @@ contract Bridge is Ownable, IBridge {
                 toAssetHash: toAssetHash,
                 toAddress: toAddress,
                 amount: amount,
-                callee: callee,
                 callData: callData
             });
             bytes memory txData = _serializeTxArgs(txArgs);
@@ -144,7 +141,7 @@ contract Bridge is Ownable, IBridge {
         }
 
         emit LockEvent(fromAssetHash, _msgSender(), toChainId, toAssetHash, toAddress, amount);
-        emit BridgeOutEvent(fromAssetHash, _msgSender(), toChainId, toAssetHash, toAddress, amount, bridgeFee, callee, callData);
+        emit BridgeOutEvent(fromAssetHash, _msgSender(), toChainId, toAssetHash, toAddress, amount, bridgeFee, callData);
 
         return true;
     }
@@ -161,15 +158,15 @@ contract Bridge is Ownable, IBridge {
         require(args.toAddress.length != 0, "toAddress cannot be empty");
         address toAddress = Utils.bytesToAddress(args.toAddress);
 
-        if (args.callee.length == 0 || args.callData.length == 0 || callProxy == address(0)) {
+        if (args.callData.length == 0 || callProxy == address(0)) {
             require(_mintTo(toAssetHash, toAddress, args.amount), "mint ptoken to user failed");
         } else {
             require(_mintTo(toAssetHash, callProxy, args.amount), "mint ptoken to callProxy failed");
-            require(ICallProxy(callProxy).proxyCall(toAssetHash, toAddress, args.amount, args.callee, args.callData), "execute callData via callProxy failed");
+            require(ICallProxy(callProxy).proxyCall(toAssetHash, toAddress, args.amount, args.callData), "execute callData via callProxy failed");
         }
 
         emit UnlockEvent(toAssetHash, toAddress, args.amount);
-        emit BirdgeInEvent(toAssetHash, toAddress, args.amount, callProxy, args.callee, args.callData);
+        emit BirdgeInEvent(toAssetHash, toAddress, args.amount, callProxy, args.callData);
 
         return true;
     }
@@ -201,7 +198,6 @@ contract Bridge is Ownable, IBridge {
             Utils.WriteVarBytes(args.toAssetHash),
             Utils.WriteVarBytes(args.toAddress),
             Utils.WriteUint255(args.amount),
-            Utils.WriteVarBytes(args.callee),
             Utils.WriteVarBytes(args.callData)
             );
         return buff;
@@ -213,7 +209,6 @@ contract Bridge is Ownable, IBridge {
         (args.toAssetHash, off) = Utils.NextVarBytes(valueBs, off);
         (args.toAddress, off) = Utils.NextVarBytes(valueBs, off);
         (args.amount, off) = Utils.NextUint255(valueBs, off);
-        (args.callee, off) = Utils.NextVarBytes(valueBs, off);
         (args.callData, off) = Utils.NextVarBytes(valueBs, off);
         return args;
     }

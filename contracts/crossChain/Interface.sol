@@ -9,7 +9,7 @@ interface IEthCrossChainManagerProxy {
 }
 
 interface ICallProxy {
-    function proxyCall( address ptoken, address receiver, uint256 amount, bytes memory callee, bytes memory callData) external returns(bool);
+    function proxyCall( address ptoken, address receiver, uint256 amount, bytes memory callData) external returns(bool);
 }
 
 interface IPToken {
@@ -23,7 +23,17 @@ interface IBridge {
         uint64 toChainId, 
         bytes memory toAddress, 
         uint256 amount,
-        bytes memory callee,
         bytes memory callData
     ) external returns(bool); 
+}
+
+interface IPool {
+    function coins(uint256 index) external view returns(address);
+    function getTokenIndex(address token) external view returns (uint8);
+    function swap(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx, uint256 minDy, uint256 deadline) external returns (uint256);
+}
+
+interface IWETH {
+    function deposit() external payable;
+    function withdraw(uint wad) external;
 }
