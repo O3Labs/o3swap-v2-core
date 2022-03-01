@@ -6,11 +6,11 @@ Core contract for crossChain
     + setBridgeFee(**optional*)
     + setCallProxy
     + setManagerProxy
-    + bindProxyHash / bindProxyHashBatch
+    + bindBridge / bindBridgeBatch
     + bindAssetHash / bindAssetHashBatch
-+ What can user do: 
++ What can user do:
     + bridgeOut
-+ What can CrossChainManager do: 
++ What can CrossChainManager do:
     + bridgeIn
 
 ### CallProxy.sol
