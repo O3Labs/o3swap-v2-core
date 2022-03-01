@@ -15,6 +15,9 @@ interface ICallProxy {
 interface IPToken {
     function mint(address to, uint256 amount) external;
     function burn(uint256 amount) external;
+    function deposit(address to, uint256 amount) external;
+    function withdraw(address to, uint256 amount) external;
+    function tokenUnderlying() external view returns(address);
 }
 
 interface IBridge {

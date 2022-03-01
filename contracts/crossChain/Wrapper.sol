@@ -153,4 +153,78 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         return true;
     }
 
+    function depositAndBridgeOut(
+        address originalToken, 
+        address pTokenAddress, 
+        uint256 amount, 
+        uint64 toChainId, 
+        bytes memory toAddress,
+        bytes memory callData
+    ) public payable nonReentrant whenNotPaused returns(bool) {
+        {
+            // check
+            require(IPToken(pTokenAddress).tokenUnderlying() == originalToken, "invalid ptoken / originalToken");
+            require(toAddress.length !=0, "empty toAddress");
+            address addr;
+            assembly { addr := mload(add(toAddress,0x14)) }
+            require(addr != address(0),"zero toAddress");
+        }
+        {
+            // pull
+            IERC20(originalToken).safeTransferFrom(_msgSender(), address(this), amount); 
+        }
+        {
+            // deposit
+            IERC20(originalToken).safeApprove(pTokenAddress, 0);
+            IERC20(originalToken).safeApprove(pTokenAddress, amount);
+            IPToken(pTokenAddress).deposit(address(this), amount);
+        }
+
+        // push
+        IERC20(pTokenAddress).safeApprove(bridge, 0);
+        IERC20(pTokenAddress).safeApprove(bridge, amount);
+        require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
+        
+        // log
+        emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 4);
+
+        return true;
+    }
+
+
+    function depositAndBridgeOutNativeToken(
+        address pTokenAddress, 
+        uint256 amount, 
+        uint64 toChainId, 
+        bytes memory toAddress,
+        bytes memory callData
+    ) public payable nonReentrant whenNotPaused returns(bool) {
+        require(msg.value >= amount, "insufficient fund");
+        {
+            // check
+            require(IPToken(pTokenAddress).tokenUnderlying() == wethAddress, "invalid ptoken");
+            require(toAddress.length !=0, "empty toAddress");
+            address addr;
+            assembly { addr := mload(add(toAddress,0x14)) }
+            require(addr != address(0),"zero toAddress");
+        }
+        {
+            // deposit & deposit
+            IWETH(wethAddress).deposit{value: amount}();
+            IERC20(wethAddress).safeApprove(pTokenAddress, 0);
+            IERC20(wethAddress).safeApprove(pTokenAddress, amount);
+            IPToken(pTokenAddress).deposit(address(this), amount);
+        }
+
+        // push
+        IERC20(pTokenAddress).safeApprove(bridge, 0);
+        IERC20(pTokenAddress).safeApprove(bridge, amount);
+        require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
+        
+        // log
+        emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value.sub(amount), 5);
+
+        return true;
+    }
+
 }
