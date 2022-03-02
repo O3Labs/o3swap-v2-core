@@ -51,15 +51,15 @@ contract CallProxy is ICallProxy, Ownable {
             try this.decodeCallDataForSwap(callData)
             returns(address poolAddress,bool unwrapETH,bool swapAll,uint8 tokenIndexFrom, uint8 tokenIndexTo,uint256 dx,uint256 dy,uint256 deadline)
             {
+                // check from token address
+                if (address(IPool(poolAddress).coins(tokenIndexFrom)) != ptoken) {
+                    _transferFromContract(ptoken, receiver, amount); 
+                    return true;
+                }
+
                 // check swap amount
                 if (swapAll) {
                     dx = amount;
-                }
-
-                // check from token address
-                if (address(IPool(poolAddress).coins(tokenIndexFrom)) != ptoken) {
-                    IERC20(ptoken).safeTransfer(receiver, amount);
-                    return true;
                 }
 
                 // do swap
@@ -88,7 +88,7 @@ contract CallProxy is ICallProxy, Ownable {
         // transfer the remaining ptoken to receiver
         uint256 balance = IERC20(ptoken).balanceOf(address(this));
         if (balance != 0) {
-            IERC20(ptoken).safeTransfer(receiver, balance);
+            _transferFromContract(ptoken, receiver, balance); 
         }
         return true;
     }
@@ -182,7 +182,9 @@ contract CallProxy is ICallProxy, Ownable {
         return buff;
     }
 
-
+    function _transferFromContract(address token, address receiver, uint256 amount) internal {
+        IERC20(token).safeTransfer(receiver, amount);
+    }
     function _boolPairToUint8(bool flag1, bool flag2) internal pure returns(uint8 res) {
         assembly{
             res := add(flag1, mul(flag2, 2))
