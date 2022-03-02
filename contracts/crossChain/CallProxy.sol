@@ -57,13 +57,8 @@ contract CallProxy is ICallProxy, Ownable {
                 }
 
                 // check from token address
-<<<<<<< HEAD
                 if (IPool(poolAddress).coins(tokenIndexFrom) != ptoken) {
                     IERC20(ptoken).safeTransfer(receiver, amount);
-=======
-                if (address(IPool(poolAddress).coins(tokenIndexFrom)) != ptoken) {
-                    IERC20(ptoken).transfer(receiver, amount);
->>>>>>> o3/dev
                     return true;
                 }
 
@@ -75,13 +70,8 @@ contract CallProxy is ICallProxy, Ownable {
                     IWETH(wethAddress).withdraw(dy);
                     payable(receiver).transfer(dy);
                 } else if (dy != 0) {
-<<<<<<< HEAD
                     IERC20 targetToken = IERC20(IPool(poolAddress).coins(tokenIndexTo));
                     targetToken.safeTransfer(receiver, dy);
-=======
-                    IERC20 targetToken = IPool(poolAddress).coins(tokenIndexTo);
-                    targetToken.transfer(receiver, dy);
->>>>>>> o3/dev
                 }
             } catch { /* do nothing if data is invalid*/ }
         } else if (externalCallEnabled && tag == 0x02) { // external call
@@ -98,11 +88,7 @@ contract CallProxy is ICallProxy, Ownable {
         // transfer the remaining ptoken to receiver
         uint256 balance = IERC20(ptoken).balanceOf(address(this));
         if (balance != 0) {
-<<<<<<< HEAD
             IERC20(ptoken).safeTransfer(receiver, balance);
-=======
-            IERC20(ptoken).transfer(receiver, balance);
->>>>>>> o3/dev
         }
         return true;
     }
