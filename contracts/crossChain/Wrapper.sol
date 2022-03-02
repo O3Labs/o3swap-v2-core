@@ -49,7 +49,7 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
 
     function rescueFund(address tokenAddress) public onlyOwner {
         IERC20 token = IERC20(tokenAddress);
-        token.transfer(_msgSender(), token.balanceOf(address(this)));
+        token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
     function bridgeOut(
