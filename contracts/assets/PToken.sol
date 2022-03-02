@@ -5,8 +5,8 @@ pragma solidity ^0.8.0;
 import "../access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract PToken is ERC20, Ownable {
     using SafeMath for uint;
@@ -49,7 +49,7 @@ contract PToken is ERC20, Ownable {
     }
 
     function burn(uint256 amount) external onlyAuthorizedCaller {
-        _burn(msg.sender, amount);
+        _burn(_msgSender(), amount);
     }
 
     // deposit input amount is the original token amount
@@ -79,7 +79,7 @@ contract PToken is ERC20, Ownable {
     function enableDepositWithdraw() external onlyOwner {
         _depositWithdrawEnabled = true;
     }
- 
+
     function disableDepositWithdraw() external onlyOwner {
         _depositWithdrawEnabled = false;
     }

@@ -1,11 +1,17 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
-import "./Interface.sol";
 import "./Utils.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "../access/Ownable.sol";
+import "./interfaces/IBridge.sol";
+import "./interfaces/ICallProxy.sol";
+import "../assets/interfaces/IPToken.sol";
+import "./interfaces/IEthCrossChainManager.sol";
+import "./interfaces/IEthCrossChainManagerProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Bridge is Ownable, IBridge {
     using SafeMath for uint;
@@ -30,13 +36,13 @@ contract Bridge is Ownable, IBridge {
     event setBridgeFeeEvent(uint256 rate, address feeCollector);
     event SetCallProxyEvent(address callProxy);
     event SetManagerProxyEvent(address manager);
-    event BindProxyEvent(uint64 toChainId, bytes targetProxyHash);
-    event BindAssetEvent(address fromAssetHash, uint64 toChainId, bytes targetProxyHash);
+    event BindBridgeEvent(uint64 toChainId, bytes targetBridge);
+    event BindAssetEvent(address fromAssetHash, uint64 toChainId, bytes toAssetHash);
     event UnlockEvent(address toAssetHash, address toAddress, uint256 amount);
     event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);
     event BirdgeInEvent(address toAssetHash, address toAddress, uint256 amount, address callProxy, bytes callData);
     event BridgeOutEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount, uint256 fee, bytes callData);
-    
+
     modifier onlyManagerContract() {
         IEthCrossChainManagerProxy ieccmp = IEthCrossChainManagerProxy(managerProxyContract);
         require(_msgSender() == ieccmp.getEthCrossChainManager(), "msgSender is not EthCrossChainManagerContract");
@@ -63,52 +69,52 @@ contract Bridge is Ownable, IBridge {
         callProxy = _callProxy;
         emit SetCallProxyEvent(_callProxy);
     }
-    
+
     function setManagerProxy(address ethCCMProxyAddr) onlyOwner public {
         managerProxyContract = ethCCMProxyAddr;
         emit SetManagerProxyEvent(managerProxyContract);
     }
-    
-    function bindProxyHash(uint64 toChainId, bytes memory targetProxyHash) onlyOwner public returns (bool) {
-        proxyHashMap[toChainId] = targetProxyHash;
-        emit BindProxyEvent(toChainId, targetProxyHash);
+
+    function bindBridge(uint64 toChainId, bytes memory targetBridge) onlyOwner public returns (bool) {
+        proxyHashMap[toChainId] = targetBridge;
+        emit BindBridgeEvent(toChainId, targetBridge);
         return true;
     }
-    
+
     function bindAssetHash(address fromAssetHash, uint64 toChainId, bytes memory toAssetHash) onlyOwner public returns (bool) {
         assetHashMap[fromAssetHash][toChainId] = toAssetHash;
         emit BindAssetEvent(fromAssetHash, toChainId, toAssetHash);
         return true;
     }
 
-    function bindProxyHashBatch(uint64[] memory toChainIds, bytes[] memory targetProxyHashs) onlyOwner public returns(bool) {
-        require(toChainIds.length == targetProxyHashs.length, "Inconsistent parameter lengths");
+    function bindBridgeBatch(uint64[] memory toChainIds, bytes[] memory targetProxyHashes) onlyOwner public returns(bool) {
+        require(toChainIds.length == targetProxyHashes.length, "Inconsistent parameter lengths");
         for (uint i=0; i<toChainIds.length; i++) {
-            proxyHashMap[toChainIds[i]] = targetProxyHashs[i];
-            emit BindProxyEvent(toChainIds[i], targetProxyHashs[i]);
+            proxyHashMap[toChainIds[i]] = targetProxyHashes[i];
+            emit BindBridgeEvent(toChainIds[i], targetProxyHashes[i]);
         }
         return true;
     }
 
-    function bindAssetHashBatch(address[] memory fromAssetHashs, uint64[] memory toChainIds, bytes[] memory toAssetHashs) onlyOwner public returns(bool) {
+    function bindAssetHashBatch(address[] memory fromAssetHashs, uint64[] memory toChainIds, bytes[] memory toAssetHashes) onlyOwner public returns(bool) {
         require(toChainIds.length == fromAssetHashs.length, "Inconsistent parameter lengths");
-        require(toChainIds.length == toAssetHashs.length, "Inconsistent parameter lengths");
+        require(toChainIds.length == toAssetHashes.length, "Inconsistent parameter lengths");
         for (uint i=0; i<toChainIds.length; i++) {
-            assetHashMap[fromAssetHashs[i]][toChainIds[i]] = toAssetHashs[i];
-            emit BindAssetEvent(fromAssetHashs[i], toChainIds[i], toAssetHashs[i]);
+            assetHashMap[fromAssetHashs[i]][toChainIds[i]] = toAssetHashes[i];
+            emit BindAssetEvent(fromAssetHashs[i], toChainIds[i], toAssetHashes[i]);
         }
         return true;
     }
 
     function bridgeOut(
-        address fromAssetHash, 
-        uint64 toChainId, 
-        bytes memory toAddress, 
+        address fromAssetHash,
+        uint64 toChainId,
+        bytes memory toAddress,
         uint256 amount,
         bytes memory callData
     ) public override returns(bool) {
         require(amount != 0, "amount cannot be zero!");
-        
+
         // check if bridge fee is required
         uint256 bridgeFee = 0;
         if (bridgeFeeRate == 0 || bridgeFeeCollector == address(0)) {
@@ -124,7 +130,7 @@ contract Bridge is Ownable, IBridge {
         bytes memory toAssetHash = assetHashMap[fromAssetHash][toChainId];
         require(toAssetHash.length != 0, "empty illegal toAssetHash");
 
-        {            
+        {
             TxArgs memory txArgs = TxArgs({
                 toAssetHash: toAssetHash,
                 toAddress: toAddress,
@@ -191,7 +197,7 @@ contract Bridge is Ownable, IBridge {
         IEthCrossChainManagerProxy eccmp = IEthCrossChainManagerProxy(managerProxyContract);
         return eccmp.getEthCrossChainManager();
     }
-    
+
     function _serializeTxArgs(TxArgs memory args) internal pure returns (bytes memory) {
         bytes memory buff;
         buff = abi.encodePacked(

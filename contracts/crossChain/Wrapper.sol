@@ -1,7 +1,12 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
-import "./Interface.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../access/Ownable.sol";
+import "./interfaces/IWETH.sol";
+import "./interfaces/IBridge.sol";
+import "../swap/interfaces/IPool.sol";
+import "../assets/interfaces/IPToken.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -53,9 +58,9 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
     }
 
     function bridgeOut(
-        address pTokenAddress, 
+        address pTokenAddress,
         uint256 amount,
-        uint64 toChainId, 
+        uint64 toChainId,
         bytes memory toAddress,
         bytes memory callData
     ) public payable nonReentrant whenNotPaused returns(bool) {
@@ -72,14 +77,14 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         IERC20(pTokenAddress).safeApprove(bridge, 0);
         IERC20(pTokenAddress).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
-        
+
         // log
         emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 1);
 
         return true;
 
     }
-    
+
     function swapAndBridgeOut(
         address poolAddress, address tokenFrom, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline,   // args for swap
         uint64 toChainId, bytes memory toAddress, bytes memory callData                                         // args for bridge
@@ -94,7 +99,7 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         }
         {
             // pull
-            IERC20(tokenFrom).safeTransferFrom(_msgSender(), address(this), dx); 
+            IERC20(tokenFrom).safeTransferFrom(_msgSender(), address(this), dx);
         }
         {
             // swap
@@ -103,19 +108,19 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
             IPool pool = IPool(poolAddress);
             pool.swap(pool.getTokenIndex(tokenFrom), pool.getTokenIndex(tokenTo), dx, minDy, deadline);
         }
-        
+
         // push
         uint256 amount = IERC20(tokenTo).balanceOf(address(this)).sub(balanceBefore);
         IERC20(tokenTo).safeApprove(bridge, 0);
         IERC20(tokenTo).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "lock erc20 fail");
-    
+
         // log
         emit PolyWrapperLock(tokenTo, _msgSender(), toChainId, toAddress, amount, msg.value, 2);
 
         return true;
     }
-    
+
     function swapAndBridgeOutNativeToken(
         address poolAddress, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline,     // args for swap
         uint64 toChainId, bytes memory toAddress, bytes memory callData                        // args for bridge
@@ -140,13 +145,13 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
             IPool pool = IPool(poolAddress);
             pool.swap(pool.getTokenIndex(wethAddress), pool.getTokenIndex(tokenTo), dx, minDy, deadline);
         }
-        
+
         // push
         uint256 amount = IERC20(tokenTo).balanceOf(address(this)).sub(balanceBefore);
         IERC20(tokenTo).safeApprove(bridge, 0);
         IERC20(tokenTo).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "lock erc20 fail");
-    
+
         // log
         emit PolyWrapperLock(tokenTo, _msgSender(), toChainId, toAddress, amount, msg.value.sub(dx), 3);
 
@@ -154,10 +159,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
     }
 
     function depositAndBridgeOut(
-        address originalToken, 
-        address pTokenAddress, 
-        uint256 amount, 
-        uint64 toChainId, 
+        address originalToken,
+        address pTokenAddress,
+        uint256 amount,
+        uint64 toChainId,
         bytes memory toAddress,
         bytes memory callData
     ) public payable nonReentrant whenNotPaused returns(bool) {
@@ -171,7 +176,7 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         }
         {
             // pull
-            IERC20(originalToken).safeTransferFrom(_msgSender(), address(this), amount); 
+            IERC20(originalToken).safeTransferFrom(_msgSender(), address(this), amount);
         }
         {
             // deposit
@@ -184,18 +189,17 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         IERC20(pTokenAddress).safeApprove(bridge, 0);
         IERC20(pTokenAddress).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
-        
+
         // log
         emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 4);
 
         return true;
     }
 
-
     function depositAndBridgeOutNativeToken(
-        address pTokenAddress, 
-        uint256 amount, 
-        uint64 toChainId, 
+        address pTokenAddress,
+        uint256 amount,
+        uint64 toChainId,
         bytes memory toAddress,
         bytes memory callData
     ) public payable nonReentrant whenNotPaused returns(bool) {
@@ -220,11 +224,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         IERC20(pTokenAddress).safeApprove(bridge, 0);
         IERC20(pTokenAddress).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
-        
+
         // log
         emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value.sub(amount), 5);
 
         return true;
     }
-
 }

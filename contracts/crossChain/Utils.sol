@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 library Utils {
-    
+
     function WriteByte(bytes1 b) internal pure returns (bytes memory) {
         return WriteUint8(uint8(b));
     }
+
     function WriteUint8(uint8 v) internal pure returns (bytes memory) {
         bytes memory buff;
         assembly{
@@ -16,6 +19,7 @@ library Utils {
         }
         return buff;
     }
+
     function WriteUint16(uint16 v) internal pure returns (bytes memory) {
         bytes memory buff;
 
@@ -36,6 +40,7 @@ library Utils {
         }
         return buff;
     }
+
     function WriteUint32(uint32 v) internal pure returns(bytes memory) {
         bytes memory buff;
         assembly{
@@ -55,6 +60,7 @@ library Utils {
         }
         return buff;
     }
+
     function WriteUint64(uint64 v) internal pure returns(bytes memory) {
         bytes memory buff;
 
@@ -75,6 +81,7 @@ library Utils {
         }
         return buff;
     }
+
     function WriteUint255(uint256 v) internal pure returns (bytes memory) {
         require(v <= 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Value exceeds uint255 range");
         bytes memory buff;
@@ -96,10 +103,12 @@ library Utils {
         }
         return buff;
     }
+
     function WriteVarBytes(bytes memory data) internal pure returns (bytes memory) {
         uint64 l = uint64(data.length);
         return abi.encodePacked(WriteVarUint(l), data);
     }
+
     function WriteVarUint(uint64 v) internal pure returns (bytes memory) {
         if (v < 0xFD){
     		return WriteUint8(uint8(v));
@@ -112,7 +121,6 @@ library Utils {
     	}
     }
 
-
     function NextByte(bytes memory buff, uint256 offset) internal pure returns (bytes1, uint256) {
         require(offset + 1 <= buff.length && offset < offset + 1, "NextByte, Offset exceeds maximum");
         bytes1 v;
@@ -121,6 +129,7 @@ library Utils {
         }
         return (v, offset + 1);
     }
+
     function NextUint8(bytes memory buff, uint256 offset) internal pure returns (uint8, uint256) {
         require(offset + 1 <= buff.length && offset < offset + 1, "NextUint8, Offset exceeds maximum");
         uint8 v;
@@ -133,9 +142,10 @@ library Utils {
         }
         return (v, offset + 1);
     }
+
     function NextUint16(bytes memory buff, uint256 offset) internal pure returns (uint16, uint256) {
         require(offset + 2 <= buff.length && offset < offset + 2, "NextUint16, offset exceeds maximum");
-        
+
         uint16 v;
         assembly {
             let tmpbytes := mload(0x40)
@@ -147,6 +157,7 @@ library Utils {
         }
         return (v, offset + 2);
     }
+
     function NextUint32(bytes memory buff, uint256 offset) internal pure returns (uint32, uint256) {
         require(offset + 4 <= buff.length && offset < offset + 4, "NextUint32, offset exceeds maximum");
         uint32 v;
@@ -168,6 +179,7 @@ library Utils {
         }
         return (v, offset + 4);
     }
+
     function NextUint64(bytes memory buff, uint256 offset) internal pure returns (uint64, uint256) {
         require(offset + 8 <= buff.length && offset < offset + 8, "NextUint64, offset exceeds maximum");
         uint64 v;
@@ -189,6 +201,7 @@ library Utils {
         }
         return (v, offset + 8);
     }
+
     function NextUint255(bytes memory buff, uint256 offset) internal pure returns (uint256, uint256) {
         require(offset + 32 <= buff.length && offset < offset + 32, "NextUint255, offset exceeds maximum");
         uint256 v;
@@ -211,6 +224,7 @@ library Utils {
         require(v <= 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, "Value exceeds the range");
         return (v, offset + 32);
     }
+
     function NextVarBytes(bytes memory buff, uint256 offset) internal pure returns(bytes memory, uint256) {
         uint len;
         (len, offset) = NextVarUint(buff, offset);
@@ -267,6 +281,7 @@ library Utils {
 
         return (tempBytes, offset + len);
     }
+
     function NextVarUint(bytes memory buff, uint256 offset) internal pure returns(uint, uint256) {
         bytes1 v;
         (v, offset) = NextByte(buff, offset);
@@ -294,7 +309,6 @@ library Utils {
             return (value, offset);
         }
     }
-
 
     function bytesToAddress(bytes memory _bs) internal pure returns (address addr) {
         require(_bs.length == 20, "bytes length does not match address");

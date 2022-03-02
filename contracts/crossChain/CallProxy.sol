@@ -1,11 +1,15 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
-import "./Interface.sol";
 import "./Utils.sol";
+import "../access/Ownable.sol";
+import "./interfaces/IWETH.sol";
+import "./interfaces/ICallProxy.sol";
+import "../swap/interfaces/IPool.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract CallProxy is ICallProxy, Ownable {
     using SafeERC20 for IERC20;
@@ -44,8 +48,8 @@ contract CallProxy is ICallProxy, Ownable {
         (bytes1 tag, ) = Utils.NextByte(callData, 0);
         if (tag == 0x01) { // swap
             // decode data
-            try this.decodeCallDataForSwap(callData) 
-            returns(address poolAddress,bool unwrapETH,bool swapAll,uint8 tokenIndexFrom, uint8 tokenIndexTo,uint256 dx,uint256 dy,uint256 deadline) 
+            try this.decodeCallDataForSwap(callData)
+            returns(address poolAddress,bool unwrapETH,bool swapAll,uint8 tokenIndexFrom, uint8 tokenIndexTo,uint256 dx,uint256 dy,uint256 deadline)
             {
                 // check swap amount
                 if (swapAll) {
@@ -56,13 +60,13 @@ contract CallProxy is ICallProxy, Ownable {
                 if (IPool(poolAddress).coins(tokenIndexFrom) != ptoken) {
                     IERC20(ptoken).safeTransfer(receiver, amount);
                     return true;
-                } 
+                }
 
                 // do swap
                 dy = _swap(poolAddress, tokenIndexFrom, tokenIndexTo, dx, dy, deadline);
 
                 // check if unwrap ETH is needed
-                if (unwrapETH && IPool(poolAddress).coins(tokenIndexTo) == wethAddress && dy != 0) {
+                if (unwrapETH && address(IPool(poolAddress).coins(tokenIndexTo)) == wethAddress && dy != 0) {
                     IWETH(wethAddress).withdraw(dy);
                     payable(receiver).transfer(dy);
                 } else if (dy != 0) {
@@ -104,10 +108,10 @@ contract CallProxy is ICallProxy, Ownable {
         address poolAddress,
         bool unwrapETH,
         bool swapAll,
-        uint8 tokenIndexFrom, 
-        uint8 tokenIndexTo, 
-        uint256 dx, 
-        uint256 minDy, 
+        uint8 tokenIndexFrom,
+        uint8 tokenIndexTo,
+        uint256 dx,
+        uint256 minDy,
         uint256 deadline
     ){
         bytes memory poolAddressBytes;
@@ -133,10 +137,10 @@ contract CallProxy is ICallProxy, Ownable {
         bytes memory poolAddress,
         bool unwrapETH,
         bool swapAll,
-        uint8 tokenIndexFrom, 
-        uint8 tokenIndexTo, 
-        uint256 dx, 
-        uint256 minDy, 
+        uint8 tokenIndexFrom,
+        uint8 tokenIndexTo,
+        uint256 dx,
+        uint256 minDy,
         uint256 deadline
     ) public pure returns(bytes memory) {
         bytes memory buff;
