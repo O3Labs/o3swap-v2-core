@@ -57,7 +57,7 @@ contract CallProxy is ICallProxy, Ownable {
                 }
 
                 // check from token address
-                if (IPool(poolAddress).coins(tokenIndexFrom) != ptoken) {
+                if (address(IPool(poolAddress).coins(tokenIndexFrom)) != ptoken) {
                     IERC20(ptoken).safeTransfer(receiver, amount);
                     return true;
                 }
@@ -70,7 +70,7 @@ contract CallProxy is ICallProxy, Ownable {
                     IWETH(wethAddress).withdraw(dy);
                     payable(receiver).transfer(dy);
                 } else if (dy != 0) {
-                    IERC20 targetToken = IERC20(IPool(poolAddress).coins(tokenIndexTo));
+                    IERC20 targetToken = IPool(poolAddress).coins(tokenIndexTo);
                     targetToken.safeTransfer(receiver, dy);
                 }
             } catch { /* do nothing if data is invalid*/ }
