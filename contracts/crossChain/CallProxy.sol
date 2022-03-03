@@ -53,7 +53,7 @@ contract CallProxy is ICallProxy, Ownable {
             {
                 // check from token address
                 if (address(IPool(poolAddress).coins(tokenIndexFrom)) != ptoken) {
-                    _transferFromContract(ptoken, receiver, amount); 
+                    _transferFromContract(ptoken, receiver, amount);
                     return true;
                 }
 
@@ -88,7 +88,7 @@ contract CallProxy is ICallProxy, Ownable {
         // transfer the remaining ptoken to receiver
         uint256 balance = IERC20(ptoken).balanceOf(address(this));
         if (balance != 0) {
-            _transferFromContract(ptoken, receiver, balance); 
+            _transferFromContract(ptoken, receiver, balance);
         }
         return true;
     }
@@ -169,6 +169,7 @@ contract CallProxy is ICallProxy, Ownable {
 
         (data, off) = Utils.NextVarBytes(callData, off);
     }
+
     function encodeArgsForExternalCall(
         bytes memory callee,
         bytes memory data
@@ -185,11 +186,13 @@ contract CallProxy is ICallProxy, Ownable {
     function _transferFromContract(address token, address receiver, uint256 amount) internal {
         IERC20(token).safeTransfer(receiver, amount);
     }
+
     function _boolPairToUint8(bool flag1, bool flag2) internal pure returns(uint8 res) {
         assembly{
             res := add(flag1, mul(flag2, 2))
         }
     }
+
     function _uint8ToBoolPair(uint8 raw) internal pure returns(bool flag1, bool flag2) {
         assembly{
             flag1 := mod(raw, 2)
