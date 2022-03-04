@@ -27,11 +27,13 @@ contract Bridge is Ownable, IBridge {
     bool isInitialized = true;
     uint256 private constant FEE_DENOMINATOR = 10**10;
     uint64 private constant CORE_CHAIN_ID = 2;
+
     uint256 public bridgeFeeRate;
     address public bridgeFeeCollector;
     address public callProxy;
     address public managerProxyContract;
-    mapping(uint64 => bytes) public proxyHashMap;
+
+    mapping(uint64 => bytes) public bridgeHashMap;
     mapping(address => mapping(uint64 => bytes)) public assetHashMap;
 
     event setBridgeFeeEvent(uint256 rate, address feeCollector);
@@ -75,7 +77,7 @@ contract Bridge is Ownable, IBridge {
     }
 
     function bindBridge(uint64 toChainId, bytes memory targetBridge) onlyOwner public returns (bool) {
-        proxyHashMap[toChainId] = targetBridge;
+        bridgeHashMap[toChainId] = targetBridge;
         emit BindBridgeEvent(toChainId, targetBridge);
         return true;
     }
@@ -86,11 +88,11 @@ contract Bridge is Ownable, IBridge {
         return true;
     }
 
-    function bindBridgeBatch(uint64[] memory toChainIds, bytes[] memory targetProxyHashes) onlyOwner public returns(bool) {
-        require(toChainIds.length == targetProxyHashes.length, "Inconsistent parameter lengths");
+    function bindBridgeBatch(uint64[] memory toChainIds, bytes[] memory targetBridgeHashes) onlyOwner public returns(bool) {
+        require(toChainIds.length == targetBridgeHashes.length, "Inconsistent parameter lengths");
         for (uint i=0; i<toChainIds.length; i++) {
-            proxyHashMap[toChainIds[i]] = targetProxyHashes[i];
-            emit BindBridgeEvent(toChainIds[i], targetProxyHashes[i]);
+            bridgeHashMap[toChainIds[i]] = targetBridgeHashes[i];
+            emit BindBridgeEvent(toChainIds[i], targetBridgeHashes[i]);
         }
         return true;
     }
@@ -190,9 +192,9 @@ contract Bridge is Ownable, IBridge {
 
             IEthCrossChainManager eccm = IEthCrossChainManager(getCrossChainManagerAddress());
 
-            bytes memory toProxyHash = proxyHashMap[toChainId];
-            require(toProxyHash.length != 0, "empty illegal toProxyHash");
-            require(eccm.crossChain(toChainId, toProxyHash, "bridgeIn", txData), "EthCrossChainManager crossChain executed error!");
+            bytes memory targetBridge = bridgeHashMap[toChainId];
+            require(targetBridge.length != 0, "empty illegal targetBridge");
+            require(eccm.crossChain(toChainId, targetBridge, "bridgeIn", txData), "EthCrossChainManager crossChain executed error!");
         }
 
         emit LockEvent(fromAssetHash, _msgSender(), toChainId, toAssetHash, toAddress, amount);
@@ -204,7 +206,7 @@ contract Bridge is Ownable, IBridge {
         TxArgs memory args = _deserializeTxArgs(argsBs);
 
         require(fromContractAddr.length != 0, "from proxy contract address cannot be empty");
-        require(Utils.equalStorage(proxyHashMap[fromChainId], fromContractAddr), "From Proxy contract address error!");
+        require(Utils.equalStorage(bridgeHashMap[fromChainId], fromContractAddr), "From Proxy contract address error!");
 
         require(args.toAssetHash.length != 0, "toAssetHash cannot be empty");
         address toAssetHash = Utils.bytesToAddress(args.toAssetHash);
