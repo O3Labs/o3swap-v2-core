@@ -21,6 +21,9 @@ contract PToken is ERC20, Ownable {
     address private _tokenUnderlying;
     mapping (address => bool) private _authorizedCaller;
 
+    event Deposit(address to, uint256 amount);
+    event Withdraw(address to, uint256 amount, uint256 fee);
+
     modifier onlyAuthorizedCaller() {
         require(_msgSender() == owner() || _authorizedCaller[_msgSender()],"PTOKEN: NOT_AUTHORIZED");
         _;
@@ -61,6 +64,8 @@ contract PToken is ERC20, Ownable {
     function deposit(address to, uint256 amount) external onlyDepositWithdrawEnabled {
         IERC20(_tokenUnderlying).safeTransferFrom(_msgSender(), address(this), amount);
         _mint(to, _precisionConversion(false, amount));
+
+        emit Deposit(to, amount);
     }
 
     // withdraw input amount is the ptoken amount
@@ -68,13 +73,19 @@ contract PToken is ERC20, Ownable {
     // when withdraw 1$ pUSDT , amount is 10**18 , and you'll receive 10**6 USDT
     function withdraw(address to, uint256 amount) external onlyDepositWithdrawEnabled {
         _burn(_msgSender(), amount);
+
         amount = _precisionConversion(true, amount);
+        uint256 fee = 0;
+
         if (_withdrawFeeRate != 0 && _feeCollector != address(0)) {
-            uint256 fee = amount.mul(_withdrawFeeRate).div(FEE_DENOMINATOR);
+            fee = amount.mul(_withdrawFeeRate).div(FEE_DENOMINATOR);
             amount = amount.sub(fee);
             IERC20(_tokenUnderlying).safeTransfer(_feeCollector, fee);
         }
+
         IERC20(_tokenUnderlying).safeTransfer(to, amount);
+
+        emit Withdraw(to, amount, fee);
     }
 
     function setAuthorizedCaller(address caller) external onlyOwner {
@@ -94,10 +105,11 @@ contract PToken is ERC20, Ownable {
     }
 
     function setWithdrawFee(uint256 withdrawFeeRate_, address feeCollector_) external onlyOwner {
+        require(withdrawFeeRate_ <= FEE_DENOMINATOR, "new withdraw fee exceeds maximum");
+
         _withdrawFeeRate = withdrawFeeRate_;
         _feeCollector = feeCollector_;
     }
-
 
     function checkAuthorizedCaller(address caller) external view returns (bool) {
         return _authorizedCaller[caller];
