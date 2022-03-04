@@ -84,7 +84,7 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         // push
         IERC20(pTokenAddress).safeApprove(bridge, 0);
         IERC20(pTokenAddress).safeApprove(bridge, amount);
-        require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
+        require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "bridgeOut fail");
 
         // log
         emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 1);
@@ -120,7 +120,7 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         uint256 amount = IERC20(tokenTo).balanceOf(address(this)).sub(balanceBefore);
         IERC20(tokenTo).safeApprove(bridge, 0);
         IERC20(tokenTo).safeApprove(bridge, amount);
-        require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "lock erc20 fail");
+        require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "bridgeOut fail");
 
         // log
         emit PolyWrapperLock(tokenTo, _msgSender(), toChainId, toAddress, amount, msg.value, 2);
@@ -157,7 +157,7 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         uint256 amount = IERC20(tokenTo).balanceOf(address(this)).sub(balanceBefore);
         IERC20(tokenTo).safeApprove(bridge, 0);
         IERC20(tokenTo).safeApprove(bridge, amount);
-        require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "lock erc20 fail");
+        require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "bridgeOut fail");
 
         // log
         emit PolyWrapperLock(tokenTo, _msgSender(), toChainId, toAddress, amount, msg.value.sub(dx), 3);
@@ -185,17 +185,11 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
             // pull
             IERC20(originalToken).safeTransferFrom(_msgSender(), address(this), amount);
         }
-        {
-            // deposit
-            IERC20(originalToken).safeApprove(pTokenAddress, 0);
-            IERC20(originalToken).safeApprove(pTokenAddress, amount);
-            IPToken(pTokenAddress).deposit(address(this), amount);
-        }
 
         // push
-        IERC20(pTokenAddress).safeApprove(bridge, 0);
-        IERC20(pTokenAddress).safeApprove(bridge, amount);
-        require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
+        IERC20(originalToken).safeApprove(bridge, 0);
+        IERC20(originalToken).safeApprove(bridge, amount);
+        require(IBridge(bridge).depositAndBridgeOut(originalToken, pTokenAddress, toChainId, toAddress, amount, callData), "depositAndBridgeOut fail");
 
         // log
         emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 4);
@@ -220,20 +214,43 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
             require(addr != address(0), "zero toAddress");
         }
         {
-            // deposit & deposit
+            // deposit ETH
             IWETH(wethAddress).deposit{value: amount}();
-            IERC20(wethAddress).safeApprove(pTokenAddress, 0);
-            IERC20(wethAddress).safeApprove(pTokenAddress, amount);
-            IPToken(pTokenAddress).deposit(address(this), amount);
         }
+
+        // push
+        IERC20(wethAddress).safeApprove(bridge, 0);
+        IERC20(wethAddress).safeApprove(bridge, amount);
+        require(IBridge(bridge).depositAndBridgeOut(wethAddress, pTokenAddress, toChainId, toAddress, amount, callData), "depositAndBridgeOut fail");
+
+        // log
+        emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value.sub(amount), 5);
+
+        return true;
+    }
+
+    function bridgeOutAndWithdraw(
+        address pTokenAddress,
+        uint64 toChainId,
+        bytes memory toAddress,
+        uint256 amount
+    ) public payable nonReentrant whenNotPaused returns(bool) {
+        // check
+        require(toAddress.length !=0, "empty toAddress");
+        address addr;
+        assembly { addr := mload(add(toAddress,0x14)) }
+        require(addr != address(0),"zero toAddress");
+
+        // pull
+        IERC20(pTokenAddress).safeTransferFrom(_msgSender(), address(this), amount);
 
         // push
         IERC20(pTokenAddress).safeApprove(bridge, 0);
         IERC20(pTokenAddress).safeApprove(bridge, amount);
-        require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "lock erc20 fail");
+        require(IBridge(bridge).bridgeOutAndWithdraw(pTokenAddress, toChainId, toAddress, amount), "bridgeOutAndWithdraw fail");
 
         // log
-        emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value.sub(amount), 5);
+        emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 6);
 
         return true;
     }

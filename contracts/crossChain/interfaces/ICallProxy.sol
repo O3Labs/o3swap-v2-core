@@ -9,4 +9,10 @@ interface ICallProxy {
         uint256 amount,
         bytes memory callData
     ) external returns(bool);
+
+    function encodeArgsForWithdraw(
+        bytes memory ptokenAddress,
+        bytes memory toAddress,
+        uint256 amount
+    ) external pure returns(bytes memory);
 }

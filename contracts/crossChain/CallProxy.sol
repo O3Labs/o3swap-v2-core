@@ -7,6 +7,7 @@ import "../access/Ownable.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/ICallProxy.sol";
 import "../swap/interfaces/IPool.sol";
+import "../assets/interfaces/IPToken.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -178,6 +179,20 @@ contract CallProxy is ICallProxy, Ownable {
         buff = abi.encodePacked(
             Utils.WriteByte(0x02),
             Utils.WriteVarBytes(callee),
+            Utils.WriteVarBytes(data)
+        );
+        return buff;
+    }
+    function encodeArgsForWithdraw(
+        bytes memory ptokenAddress,
+        bytes memory toAddress,
+        uint256 amount
+    ) public pure returns(bytes memory) {
+        bytes memory buff;
+        bytes memory data = abi.encodeWithSelector(IPToken.withdraw.selector, Utils.bytesToAddress(toAddress), amount);
+        buff = abi.encodePacked(
+            Utils.WriteByte(0x02),
+            Utils.WriteVarBytes(ptokenAddress),
             Utils.WriteVarBytes(data)
         );
         return buff;
