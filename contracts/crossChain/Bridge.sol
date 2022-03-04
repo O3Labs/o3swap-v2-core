@@ -115,7 +115,7 @@ contract Bridge is Ownable, IBridge {
     ) public override returns(bool) {
         require(amount != 0, "amount cannot be zero!");
 
-        // no bridge fee for deposit 
+        // no bridge fee for deposit
 
         // transfer_to_this + deposit + burn = transfer_to_ptoken
         require(IPToken(pTokenAddress).tokenUnderlying() == originalTokenAddress, "invalid originalToken / pToken");
@@ -133,8 +133,8 @@ contract Bridge is Ownable, IBridge {
         require(amount != 0, "amount cannot be zero!");
         require(toChainId == CORE_CHAIN_ID, "invalid toChainId for withdraw");
 
-        // no bridge fee for withdraw 
-        
+        // no bridge fee for withdraw
+
         // encode call data for withdraw
         bytes memory toAssetHash = assetHashMap[fromAssetHash][toChainId];
         require(toAssetHash.length != 0, "empty illegal toAssetHash");
@@ -265,5 +265,4 @@ contract Bridge is Ownable, IBridge {
         (args.callData, off) = Utils.NextVarBytes(valueBs, off);
         return args;
     }
-
 }

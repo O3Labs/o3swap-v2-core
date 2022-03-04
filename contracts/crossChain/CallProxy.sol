@@ -134,6 +134,7 @@ contract CallProxy is ICallProxy, Ownable {
 
         (deadline, off) = Utils.NextUint255(callData, off);
     }
+
     function encodeArgsForSwap(
         bytes memory poolAddress,
         bool unwrapETH,
@@ -157,7 +158,6 @@ contract CallProxy is ICallProxy, Ownable {
         );
         return buff;
     }
-
 
     function decodeCallDataForExternalCall(bytes memory callData) public pure returns(
         address callee,
@@ -183,6 +183,7 @@ contract CallProxy is ICallProxy, Ownable {
         );
         return buff;
     }
+
     function encodeArgsForWithdraw(
         bytes memory ptokenAddress,
         bytes memory toAddress,
