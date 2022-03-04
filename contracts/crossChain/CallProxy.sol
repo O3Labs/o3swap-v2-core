@@ -199,4 +199,6 @@ contract CallProxy is ICallProxy, Ownable {
             flag2 := div(raw, 2)
         }
     }
+
+    receive() external payable {}
 }
