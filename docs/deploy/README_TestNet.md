@@ -1,4 +1,4 @@
-# [MainNet](https://github.com/O3Labs/o3swap-v2-core/blob/main/docs/deploy/README.md) | TestNet
+# [MainNet](README.md) | TestNet
 
 ## Ethereum Ropsten
 
@@ -19,7 +19,7 @@
 | --------------- | ------------------------------------------ |
 | Wrapper         | 0x9F5D29498527bc054169C6Da36D11A4F4A78F715 |
 | Bridge          | 0x5D202c909D98439109134d2F7452016BD0413273 |
-| CallProxy       | 0x8A8bCAcE2aB687DC75d26c066362bDa4595d6712 |
+| CallProxy       | 0xd92404E9cb37853ec23B4A4bE2BE7E57c9dE8958 |
 | USDT-pUSDT Pool | 0x2a5c55a8149db4ad1693d8f4432b36d54877c0f6 |
 | WETH-pWETH Pool | 0xe53bAAeceD9d21f80bBe170A0f5AcAaE9Fe5FF49 |
 
@@ -40,7 +40,7 @@
 | --------------- | ------------------------------------------ |
 | Wrapper         | 0x90e07DAad7334FB7D6C37025e406768020b36880 |
 | Bridge          | 0x18118667d4866f2EF9d62bDa818F32EdCf94D7B2 |
-| CallProxy       | 0x0a60b40A7E07EE142323f7E23abB600966952783 |
+| CallProxy       | 0xe4f3DF585088cC9ddf28DB25464Aa3B76Ea7aeFb |
 | USDT-pUSDT Pool | 0xC50f9a9BafF1547Bc33809F6B5F7F5dB4ef84cbd |
 
 ## Arbitrum Rinkeby
@@ -62,6 +62,6 @@
 | --------------- | ------------------------------------------ |
 | Wrapper         | 0x322152Ce8572C2eb9C404d6E4508e2487531F6e1 |
 | Bridge          | 0xCe9F202D8b5e49caAfC23809dEc6C9B75F5e612B |
-| CallProxy       | 0x918761521f8b02130D1Af75955f40b0b56857B13 |
+| CallProxy       | 0x10b6104b8bF0c39F4f271bdC3b9fb11a2774285E |
 | WETH-pWETH Pool | 0x90e07DAad7334FB7D6C37025e406768020b36880 |
 | USDT-pUSDT Pool | 0x26F3d93F4c5aC8B428D06d15AA01621458988C4c |
