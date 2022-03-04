@@ -26,6 +26,7 @@ contract Bridge is Ownable, IBridge {
 
     bool isInitialized = true;
     uint256 private constant FEE_DENOMINATOR = 10**10;
+    uint64 private constant CORE_CHAIN_ID = 2;
     uint256 public bridgeFeeRate;
     address public bridgeFeeCollector;
     address public callProxy;
@@ -40,8 +41,6 @@ contract Bridge is Ownable, IBridge {
     event BindAssetEvent(address fromAssetHash, uint64 toChainId, bytes toAssetHash);
     event UnlockEvent(address toAssetHash, address toAddress, uint256 amount);
     event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);
-    event BirdgeInEvent(address toAssetHash, address toAddress, uint256 amount, address callProxy, bytes callData);
-    event BridgeOutEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount, uint256 fee, bytes callData);
 
     modifier onlyManagerContract() {
         IEthCrossChainManagerProxy ieccmp = IEthCrossChainManagerProxy(managerProxyContract);
@@ -106,6 +105,46 @@ contract Bridge is Ownable, IBridge {
         return true;
     }
 
+    function depositAndBridgeOut(
+        address originalTokenAddress,
+        address pTokenAddress,
+        uint64 toChainId,
+        bytes memory toAddress,
+        uint256 amount,
+        bytes memory callData
+    ) public override returns(bool) {
+        require(amount != 0, "amount cannot be zero!");
+
+        // no bridge fee for deposit 
+
+        // transfer_to_this + deposit + burn = transfer_to_ptoken
+        require(IPToken(pTokenAddress).tokenUnderlying() == originalTokenAddress, "invalid originalToken / pToken");
+        IERC20(originalTokenAddress).safeTransferFrom(_msgSender(), pTokenAddress, amount);
+
+        return _bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData);
+    }
+
+    function bridgeOutAndWithdraw(
+        address fromAssetHash,
+        uint64 toChainId,
+        bytes memory toAddress,
+        uint256 amount
+    ) public override returns(bool) {
+        require(amount != 0, "amount cannot be zero!");
+        require(toChainId == CORE_CHAIN_ID, "invalid toChainId for withdraw");
+
+        // no bridge fee for withdraw 
+        
+        // encode call data for withdraw
+        bytes memory toAssetHash = assetHashMap[fromAssetHash][toChainId];
+        require(toAssetHash.length != 0, "empty illegal toAssetHash");
+        bytes memory callData = ICallProxy(callProxy).encodeArgsForWithdraw(toAssetHash, toAddress, amount);
+
+        require(_burnFrom(fromAssetHash, _msgSender(), amount), "transfer and burn asset from fromAddress to bridge contract failed!");
+
+        return _bridgeOut(fromAssetHash, toChainId, toAddress, amount, callData);
+    }
+
     function bridgeOut(
         address fromAssetHash,
         uint64 toChainId,
@@ -127,6 +166,16 @@ contract Bridge is Ownable, IBridge {
 
         require(_burnFrom(fromAssetHash, _msgSender(), amount), "transfer and burn asset from fromAddress to bridge contract failed!");
 
+        return _bridgeOut(fromAssetHash, toChainId, toAddress, amount, callData);
+    }
+
+    function _bridgeOut(
+        address fromAssetHash,
+        uint64 toChainId,
+        bytes memory toAddress,
+        uint256 amount,
+        bytes memory callData
+    ) internal returns(bool) {
         bytes memory toAssetHash = assetHashMap[fromAssetHash][toChainId];
         require(toAssetHash.length != 0, "empty illegal toAssetHash");
 
@@ -147,7 +196,6 @@ contract Bridge is Ownable, IBridge {
         }
 
         emit LockEvent(fromAssetHash, _msgSender(), toChainId, toAssetHash, toAddress, amount);
-        emit BridgeOutEvent(fromAssetHash, _msgSender(), toChainId, toAssetHash, toAddress, amount, bridgeFee, callData);
 
         return true;
     }
@@ -172,7 +220,6 @@ contract Bridge is Ownable, IBridge {
         }
 
         emit UnlockEvent(toAssetHash, toAddress, args.amount);
-        emit BirdgeInEvent(toAssetHash, toAddress, args.amount, callProxy, args.callData);
 
         return true;
     }

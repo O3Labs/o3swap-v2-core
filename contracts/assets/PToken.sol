@@ -12,6 +12,9 @@ contract PToken is ERC20, Ownable {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
+    uint256 constant FEE_DENOMINATOR = 10**10;
+    uint256 private _withdrawFeeRate;
+    address private _feeCollector;
     uint8 private _decimals;
     uint8 private _underlyingTokenDecimals;
     bool private _depositWithdrawEnabled;
@@ -65,7 +68,13 @@ contract PToken is ERC20, Ownable {
     // when withdraw 1$ pUSDT , amount is 10**18 , and you'll receive 10**6 USDT
     function withdraw(address to, uint256 amount) external onlyDepositWithdrawEnabled {
         _burn(_msgSender(), amount);
-        IERC20(_tokenUnderlying).safeTransfer(to, _precisionConversion(true, amount));
+        amount = _precisionConversion(true, amount);
+        if (_withdrawFeeRate != 0 && _feeCollector != address(0)) {
+            uint256 fee = amount.mul(_withdrawFeeRate).div(FEE_DENOMINATOR);
+            amount = amount.sub(fee);
+            IERC20(_tokenUnderlying).safeTransfer(_feeCollector, fee);
+        }
+        IERC20(_tokenUnderlying).safeTransfer(to, amount);
     }
 
     function setAuthorizedCaller(address caller) external onlyOwner {
@@ -84,12 +93,26 @@ contract PToken is ERC20, Ownable {
         _depositWithdrawEnabled = false;
     }
 
+    function setWithdrawFee(uint256 withdrawFeeRate_, address feeCollector_) external onlyOwner {
+        _withdrawFeeRate = withdrawFeeRate_;
+        _feeCollector = feeCollector_;
+    }
+
+
     function checkAuthorizedCaller(address caller) external view returns (bool) {
         return _authorizedCaller[caller];
     }
 
     function checkIfDepositWithdrawEnabled() external view returns (bool) {
         return _depositWithdrawEnabled;
+    }
+
+    function checkWithdrawFeeRate() external view returns (uint256) {
+        return _withdrawFeeRate;
+    }
+
+    function checkFeeCollector() external view returns (address) {
+        return _feeCollector;
     }
 
     function _precisionConversion(bool fromPToken, uint256 amount) internal view returns(uint256) {

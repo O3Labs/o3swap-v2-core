@@ -10,4 +10,20 @@ interface IBridge {
         uint256 amount,
         bytes memory callData
     ) external returns(bool);
+
+    function depositAndBridgeOut(
+        address originalTokenAddress,
+        address pTokenAddress,
+        uint64 toChainId,
+        bytes memory toAddress,
+        uint256 amount,
+        bytes memory callData
+    ) external returns(bool);
+
+    function bridgeOutAndWithdraw(
+        address pTokenAddress,
+        uint64 toChainId,
+        bytes memory toAddress,
+        uint256 amount
+    ) external returns(bool);
 }
