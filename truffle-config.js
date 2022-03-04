@@ -15,15 +15,15 @@ const network_eth_mainnet = {
   skipDryRun: false
 };
 
-const eth_rinkeby_rpc = 'https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161';
-const network_eth_rinkeby = {
-    provider: () => new HDWalletProvider(privateKey, eth_rinkeby_rpc),
-    network_id: 4,
-    gas: 300 * 10000,
-    gasPrice: 40 * 10**9,
+const eth_ropsten_rpc = 'https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161';
+const network_eth_ropsten = {
+    provider: () => new HDWalletProvider(privateKey, eth_ropsten_rpc),
+    network_id: 3,
+    gas: 20 * 10000,
+    gasPrice: 6 * 10**9,
     confirmations: 0,
     timeoutBlocks: 200,
-    skipDryRun: true
+    skipDryRun: false
 };
 
 const bsc_mainnet_rpc = 'https://bsc-dataseed.binance.org';
@@ -85,6 +85,17 @@ const arbitrum_mainnet_rpc = 'https://arb1.arbitrum.io/rpc';
 const network_arbitrum_mainnet = {
   provider: () => new HDWalletProvider(privateKey, arbitrum_mainnet_rpc),
   network_id: 42161,
+  gas: 5000 * 10000,
+  gasPrice: 2 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false
+};
+
+const arbitrum_rinkeby_rpc = 'https://rinkeby.arbitrum.io/rpc';
+const network_arbitrum_rinkeby = {
+  provider: () => new HDWalletProvider(privateKey, arbitrum_rinkeby_rpc),
+  network_id: 421611,
   gas: 5000 * 10000,
   gasPrice: 2 * 10**9,
   confirmations: 0,
@@ -158,8 +169,9 @@ const network_development = {
 
  module.exports = {
   networks: {
-    development_pool: network_development,
-    development_ptoken: network_development,
+    eth_ropsten: network_eth_ropsten,
+    bsc_testnet: network_bsc_testnet,
+    arbitrum_rinkeby: network_arbitrum_rinkeby,
   },
 
   mocha: {
