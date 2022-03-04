@@ -21,7 +21,15 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
     address public feeCollector;
     address public wethAddress;
 
-    event PolyWrapperLock(address indexed fromAsset, address indexed sender, uint64 toChainId, bytes toAddress, uint net, uint fee, uint id);
+    event PolyWrapperLock (
+        address indexed fromAsset,
+        address indexed sender,
+        uint64 toChainId,
+        bytes toAddress,
+        uint net,
+        uint fee,
+        uint id
+    );
 
     modifier onlyFeeCollector {
         require(_msgSender() == feeCollector, "Not fee collector");
@@ -65,10 +73,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         bytes memory callData
     ) public payable nonReentrant whenNotPaused returns(bool) {
         // check
-        require(toAddress.length !=0, "empty toAddress");
+        require(toAddress.length != 0, "empty toAddress");
         address addr;
         assembly { addr := mload(add(toAddress,0x14)) }
-        require(addr != address(0),"zero toAddress");
+        require(addr != address(0), "zero toAddress");
 
         // pull
         IERC20(pTokenAddress).safeTransferFrom(_msgSender(), address(this), amount);
@@ -82,7 +90,6 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 1);
 
         return true;
-
     }
 
     function swapAndBridgeOut(
@@ -92,10 +99,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         uint256 balanceBefore = IERC20(tokenTo).balanceOf(address(this));
         {
             // check
-            require(toAddress.length !=0, "empty toAddress");
+            require(toAddress.length != 0, "empty toAddress");
             address addr;
             assembly { addr := mload(add(toAddress,0x14)) }
-            require(addr != address(0),"zero toAddress");
+            require(addr != address(0), "zero toAddress");
         }
         {
             // pull
@@ -129,10 +136,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         uint256 balanceBefore = IERC20(tokenTo).balanceOf(address(this));
         {
             // check
-            require(toAddress.length !=0, "empty toAddress");
+            require(toAddress.length != 0, "empty toAddress");
             address addr;
             assembly { addr := mload(add(toAddress,0x14)) }
-            require(addr != address(0),"zero toAddress");
+            require(addr != address(0), "zero toAddress");
         }
         {
             // deposit
@@ -169,10 +176,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         {
             // check
             require(IPToken(pTokenAddress).tokenUnderlying() == originalToken, "invalid ptoken / originalToken");
-            require(toAddress.length !=0, "empty toAddress");
+            require(toAddress.length != 0, "empty toAddress");
             address addr;
             assembly { addr := mload(add(toAddress,0x14)) }
-            require(addr != address(0),"zero toAddress");
+            require(addr != address(0), "zero toAddress");
         }
         {
             // pull
@@ -201,10 +208,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         {
             // check
             require(IPToken(pTokenAddress).tokenUnderlying() == wethAddress, "invalid ptoken");
-            require(toAddress.length !=0, "empty toAddress");
+            require(toAddress.length != 0, "empty toAddress");
             address addr;
             assembly { addr := mload(add(toAddress,0x14)) }
-            require(addr != address(0),"zero toAddress");
+            require(addr != address(0), "zero toAddress");
         }
         {
             // deposit ETH
