@@ -62,6 +62,8 @@ contract PToken is ERC20, Ownable {
     // e.g. USDT decimals is 6 , pUSDT decimals is 18
     // when deposit 1$ USDT , amount is 10**6 , and you'll receive 10**18 pUSDT
     function deposit(address to, uint256 amount) external onlyDepositWithdrawEnabled {
+        require(amount != 0, "deposit amount cannot be zero");
+
         IERC20(_tokenUnderlying).safeTransferFrom(_msgSender(), address(this), amount);
         _mint(to, _precisionConversion(false, amount));
 
@@ -72,11 +74,13 @@ contract PToken is ERC20, Ownable {
     // e.g. USDT decimals is 6 , pUSDT decimals is 18
     // when withdraw 1$ pUSDT , amount is 10**18 , and you'll receive 10**6 USDT
     function withdraw(address to, uint256 amount) external onlyDepositWithdrawEnabled {
+        require(amount != 0, "withdraw amount cannot be zero");
         _burn(_msgSender(), amount);
 
         amount = _precisionConversion(true, amount);
-        uint256 fee = 0;
+        require(amount != 0, "underlying token amount cannot be zero");
 
+        uint256 fee = 0;
         if (_withdrawFeeRate != 0 && _feeCollector != address(0)) {
             fee = amount.mul(_withdrawFeeRate).div(FEE_DENOMINATOR);
             amount = amount.sub(fee);
