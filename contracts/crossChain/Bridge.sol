@@ -9,6 +9,7 @@ import "./interfaces/ICallProxy.sol";
 import "../assets/interfaces/IPToken.sol";
 import "./interfaces/IEthCrossChainManager.sol";
 import "./interfaces/IEthCrossChainManagerProxy.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -122,6 +123,11 @@ contract Bridge is Ownable, IBridge {
         // transfer_to_this + deposit + burn = transfer_to_ptoken
         require(IPToken(pTokenAddress).tokenUnderlying() == originalTokenAddress, "invalid originalToken / pToken");
         IERC20(originalTokenAddress).safeTransferFrom(_msgSender(), pTokenAddress, amount);
+
+        // precision conversion
+        uint8 ptokenDecimals = ERC20(pTokenAddress).decimals();
+        uint8 underlyingTokenDecimals = ERC20(originalTokenAddress).decimals();
+        amount = amount.mul(10**ptokenDecimals).div(10**underlyingTokenDecimals);
 
         return _bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData);
     }
