@@ -21,11 +21,18 @@ contract PToken is ERC20, Ownable {
     address private _tokenUnderlying;
     mapping (address => bool) private _authorizedCaller;
 
+    uint256 private constant MAX_WITHDRAW_FEE = 5*10**8;
+
     event Deposit(address to, uint256 amount);
     event Withdraw(address to, uint256 amount, uint256 fee);
+    event SetAuthorizedCaller(address caller);
+    event RemoveAuthorizedCaller(address caller);
+    event EnableDepositWithdraw();
+    event DisableDepositWithdraw();
+    event SetWithdrawFee(uint256 withdrawFeeRate, address feeCollector);
 
     modifier onlyAuthorizedCaller() {
-        require(_msgSender() == owner() || _authorizedCaller[_msgSender()],"PTOKEN: NOT_AUTHORIZED");
+        require(_authorizedCaller[_msgSender()],"PTOKEN: NOT_AUTHORIZED");
         _;
     }
 
@@ -62,9 +69,11 @@ contract PToken is ERC20, Ownable {
     // e.g. USDT decimals is 6 , pUSDT decimals is 18
     // when deposit 1$ USDT , amount is 10**6 , and you'll receive 10**18 pUSDT
     function deposit(address to, uint256 amount) external onlyDepositWithdrawEnabled {
+        uint256 balanceBefore = IERC20(_tokenUnderlying).balanceOf(address(this));
+        IERC20(_tokenUnderlying).safeTransferFrom(_msgSender(), address(this), amount);
+        amount = IERC20(_tokenUnderlying).balanceOf(address(this)).sub(balanceBefore);
         require(amount != 0, "deposit amount cannot be zero");
 
-        IERC20(_tokenUnderlying).safeTransferFrom(_msgSender(), address(this), amount);
         _mint(to, _precisionConversion(false, amount));
 
         emit Deposit(to, amount);
@@ -94,25 +103,31 @@ contract PToken is ERC20, Ownable {
 
     function setAuthorizedCaller(address caller) external onlyOwner {
         _authorizedCaller[caller] = true;
+        emit SetAuthorizedCaller(caller);
     }
 
     function removeAuthorizedCaller(address caller) external onlyOwner {
         _authorizedCaller[caller] = false;
+        emit RemoveAuthorizedCaller(caller);
     }
 
     function enableDepositWithdraw() external onlyOwner {
         _depositWithdrawEnabled = true;
+        emit EnableDepositWithdraw();
     }
 
     function disableDepositWithdraw() external onlyOwner {
         _depositWithdrawEnabled = false;
+        emit DisableDepositWithdraw();
     }
 
     function setWithdrawFee(uint256 withdrawFeeRate_, address feeCollector_) external onlyOwner {
-        require(withdrawFeeRate_ <= FEE_DENOMINATOR, "new withdraw fee exceeds maximum");
+        require(withdrawFeeRate_ <= MAX_WITHDRAW_FEE, "new withdraw fee exceeds maximum");
 
         _withdrawFeeRate = withdrawFeeRate_;
         _feeCollector = feeCollector_;
+
+        emit SetWithdrawFee(_withdrawFeeRate, _feeCollector);
     }
 
     function checkAuthorizedCaller(address caller) external view returns (bool) {
