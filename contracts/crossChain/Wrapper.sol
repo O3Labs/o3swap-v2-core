@@ -3,17 +3,18 @@
 pragma solidity ^0.8.0;
 
 import "../access/Ownable.sol";
-import "./interfaces/IWETH.sol";
 import "./interfaces/IBridge.sol";
+import "./interfaces/IWrapper.sol";
 import "../swap/interfaces/IPool.sol";
+import "../assets/interfaces/IWETH.sol";
 import "../assets/interfaces/IPToken.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Wrapper is Ownable, Pausable, ReentrancyGuard {
+contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
@@ -31,6 +32,10 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
         uint id
     );
 
+    event SetBridgeContract(address bridge);
+    event SetFeeCollector(address feeCollector);
+    event SetWETHAddress(address wethAddress);
+
     modifier onlyFeeCollector {
         require(_msgSender() == feeCollector, "Not fee collector");
         _;
@@ -46,14 +51,17 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
 
     function setBridgeContract(address _bridge) public onlyOwner {
         bridge = _bridge;
+        emit SetBridgeContract(bridge);
     }
 
     function setFeeCollector(address _feeCollector) public onlyOwner {
         feeCollector = _feeCollector;
+        emit SetFeeCollector(feeCollector);
     }
 
     function setWETHAddress(address _weth) public onlyOwner {
         wethAddress = _weth;
+        emit SetWETHAddress(wethAddress);
     }
 
     function extractFee() public onlyFeeCollector {
@@ -93,8 +101,8 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
     }
 
     function swapAndBridgeOut(
-        address poolAddress, address tokenFrom, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline,   // args for swap
-        uint64 toChainId, bytes memory toAddress, bytes memory callData                                         // args for bridge
+        address poolAddress, address tokenFrom, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline, // args for swap
+        uint64 toChainId, bytes memory toAddress, bytes memory callData                                       // args for bridge
     ) public payable nonReentrant whenNotPaused returns(bool) {
         uint256 balanceBefore = IERC20(tokenTo).balanceOf(address(this));
         {
@@ -129,8 +137,8 @@ contract Wrapper is Ownable, Pausable, ReentrancyGuard {
     }
 
     function swapAndBridgeOutNativeToken(
-        address poolAddress, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline,     // args for swap
-        uint64 toChainId, bytes memory toAddress, bytes memory callData                        // args for bridge
+        address poolAddress, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline, // args for swap
+        uint64 toChainId, bytes memory toAddress, bytes memory callData                    // args for bridge
     ) public payable nonReentrant whenNotPaused returns(bool) {
         require(msg.value >= dx, "insufficient fund");
         uint256 balanceBefore = IERC20(tokenTo).balanceOf(address(this));
