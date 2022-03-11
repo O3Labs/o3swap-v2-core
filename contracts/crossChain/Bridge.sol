@@ -10,11 +10,13 @@ import "../assets/interfaces/IPToken.sol";
 import "./interfaces/IEthCrossChainManager.sol";
 import "./interfaces/IEthCrossChainManagerProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Bridge is Ownable, IBridge {
+contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     using SafeMath for uint;
     using SafeERC20 for IERC20;
 
@@ -108,6 +110,14 @@ contract Bridge is Ownable, IBridge {
         return true;
     }
 
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     function depositAndBridgeOut(
         address originalTokenAddress,
         address pTokenAddress,
@@ -115,7 +125,7 @@ contract Bridge is Ownable, IBridge {
         bytes memory toAddress,
         uint256 amount,
         bytes memory callData
-    ) public override returns(bool) {
+    ) public override nonReentrant whenNotPaused returns(bool) {
         require(amount != 0, "amount cannot be zero!");
 
         // no bridge fee for deposit
@@ -128,6 +138,7 @@ contract Bridge is Ownable, IBridge {
         uint8 ptokenDecimals = ERC20(pTokenAddress).decimals();
         uint8 underlyingTokenDecimals = ERC20(originalTokenAddress).decimals();
         amount = amount.mul(10**ptokenDecimals).div(10**underlyingTokenDecimals);
+        require(amount != 0, "bridge amount cannot be zero!");
 
         return _bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData);
     }
@@ -137,7 +148,7 @@ contract Bridge is Ownable, IBridge {
         uint64 toChainId,
         bytes memory toAddress,
         uint256 amount
-    ) public override returns(bool) {
+    ) public override nonReentrant whenNotPaused returns(bool) {
         require(amount != 0, "amount cannot be zero!");
         require(toChainId == CORE_CHAIN_ID, "invalid toChainId for withdraw");
 
@@ -159,7 +170,7 @@ contract Bridge is Ownable, IBridge {
         bytes memory toAddress,
         uint256 amount,
         bytes memory callData
-    ) public override returns(bool) {
+    ) public override nonReentrant whenNotPaused returns(bool) {
         require(amount != 0, "amount cannot be zero!");
 
         // check if bridge fee is required
@@ -208,7 +219,11 @@ contract Bridge is Ownable, IBridge {
         return true;
     }
 
-    function bridgeIn(bytes memory argsBs, bytes memory fromContractAddr, uint64 fromChainId) onlyManagerContract public returns (bool) {
+    function bridgeIn(
+        bytes memory argsBs,
+        bytes memory fromContractAddr,
+        uint64 fromChainId
+    ) onlyManagerContract public nonReentrant whenNotPaused returns (bool) {
         TxArgs memory args = _deserializeTxArgs(argsBs);
 
         require(fromContractAddr.length != 0, "from proxy contract address cannot be empty");
