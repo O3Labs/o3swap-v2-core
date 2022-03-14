@@ -84,7 +84,18 @@ contract CallProxy is ICallProxy, Ownable {
                     targetToken.safeTransfer(receiver, dy);
                 }
             } catch { /* do nothing if data is invalid*/ }
-        } else if (externalCallEnabled && tag == 0x02) { // external call
+        } else if (tag == 0x02) {
+            try this.decodeCallDataForWithdraw(callData) returns(address ptokenAddress, address toAddress, uint256 withdrawAmount) {
+                // check
+                if (ptokenAddress != ptoken) {
+                    _transferFromContract(ptoken, receiver, amount);
+                    return true;
+                }
+
+                // try to withdraw
+                try IPToken(ptoken).withdraw(toAddress, withdrawAmount) {} catch {}
+            } catch { /* do nothing if data is invalid*/ }
+        } else if (externalCallEnabled && tag == 0x03) { // external call
             try this.decodeCallDataForExternalCall(callData) returns(address callee,bytes memory data) {
                 // approve ptoken
                 IERC20(ptoken).safeApprove(callee, 0);
@@ -168,6 +179,38 @@ contract CallProxy is ICallProxy, Ownable {
         return buff;
     }
 
+    function decodeCallDataForWithdraw(bytes memory callData) public pure returns(
+        address ptokenAddress,
+        address toAddress,
+        uint256 amount
+    ){
+        bytes memory ptokenAddressBytes;
+        bytes memory toAddressBytes;
+        uint256 off = 1; // dismiss tag
+        (ptokenAddressBytes, off) = Utils.NextVarBytes(callData, off);
+        ptokenAddress = Utils.bytesToAddress(ptokenAddressBytes);
+
+        (toAddressBytes, off) = Utils.NextVarBytes(callData, off);
+        toAddress = Utils.bytesToAddress(toAddressBytes);
+
+        (amount, off) = Utils.NextUint255(callData, off);
+    }
+
+    function encodeArgsForWithdraw(
+        bytes memory ptokenAddress,
+        bytes memory toAddress,
+        uint256 amount
+    ) public pure returns(bytes memory) {
+        bytes memory buff;
+        buff = abi.encodePacked(
+            Utils.WriteByte(0x02),
+            Utils.WriteVarBytes(ptokenAddress),
+            Utils.WriteVarBytes(toAddress),
+            Utils.WriteUint255(amount)
+        );
+        return buff;
+    }
+
     function decodeCallDataForExternalCall(bytes memory callData) public pure returns(
         address callee,
         bytes memory data
@@ -186,23 +229,8 @@ contract CallProxy is ICallProxy, Ownable {
     ) public pure returns(bytes memory) {
         bytes memory buff;
         buff = abi.encodePacked(
-            Utils.WriteByte(0x02),
+            Utils.WriteByte(0x03),
             Utils.WriteVarBytes(callee),
-            Utils.WriteVarBytes(data)
-        );
-        return buff;
-    }
-
-    function encodeArgsForWithdraw(
-        bytes memory ptokenAddress,
-        bytes memory toAddress,
-        uint256 amount
-    ) public pure returns(bytes memory) {
-        bytes memory buff;
-        bytes memory data = abi.encodeWithSelector(IPToken.withdraw.selector, Utils.bytesToAddress(toAddress), amount);
-        buff = abi.encodePacked(
-            Utils.WriteByte(0x02),
-            Utils.WriteVarBytes(ptokenAddress),
             Utils.WriteVarBytes(data)
         );
         return buff;
