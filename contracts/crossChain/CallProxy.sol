@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import "./Utils.sol";
 import "../access/Ownable.sol";
-import "./interfaces/IWETH.sol";
 import "./interfaces/ICallProxy.sol";
 import "../swap/interfaces/IPool.sol";
+import "../assets/interfaces/IWETH.sol";
 import "../assets/interfaces/IPToken.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -19,6 +19,11 @@ contract CallProxy is ICallProxy, Ownable {
     address public wethAddress;
     address public bridgeAddress;
 
+    event SetWETH(address wethAddress);
+    event SetBridge(address bridgeAddress);
+    event EnableExternalCall();
+    event DisableExternalCall();
+
     modifier onlyBridge() {
         require(msg.sender == bridgeAddress, "CallProxy: only Bridge can do this");
         _;
@@ -26,18 +31,22 @@ contract CallProxy is ICallProxy, Ownable {
 
     function setWETH(address _wethAddress) public onlyOwner {
         wethAddress = _wethAddress;
+        emit SetWETH(_wethAddress);
     }
 
     function setBridge(address _bridgeAddress) public onlyOwner {
         bridgeAddress = _bridgeAddress;
+        emit SetBridge(bridgeAddress);
     }
 
     function enableExternalCall() public onlyOwner {
         externalCallEnabled = true;
+        emit EnableExternalCall();
     }
 
     function disableExternalCall() public onlyOwner {
         externalCallEnabled = false;
+        emit DisableExternalCall();
     }
 
     function proxyCall(
