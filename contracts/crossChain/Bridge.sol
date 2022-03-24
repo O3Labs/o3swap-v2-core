@@ -29,7 +29,6 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
 
     bool isInitialized = true;
     uint256 private constant FEE_DENOMINATOR = 10**10;
-    uint64 private constant CORE_CHAIN_ID = 2;
 
     uint256 public bridgeFeeRate;
     address public bridgeFeeCollector;
@@ -132,6 +131,7 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
 
         // transfer_to_this + deposit + burn = transfer_to_ptoken
         require(IPToken(pTokenAddress).tokenUnderlying() == originalTokenAddress, "invalid originalToken / pToken");
+        require(IPToken(pTokenAddress).checkIfDepositWithdrawEnabled(), "ptoken deposit/withdraw not enabled");
         IERC20(originalTokenAddress).safeTransferFrom(_msgSender(), pTokenAddress, amount);
 
         // precision conversion
@@ -150,7 +150,6 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         uint256 amount
     ) public override nonReentrant whenNotPaused returns(bool) {
         require(amount != 0, "amount cannot be zero!");
-        require(toChainId == CORE_CHAIN_ID, "invalid toChainId for withdraw");
 
         // no bridge fee for withdraw
 
