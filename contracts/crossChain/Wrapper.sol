@@ -200,7 +200,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         require(IBridge(bridge).depositAndBridgeOut(originalToken, pTokenAddress, toChainId, toAddress, amount, callData), "depositAndBridgeOut fail");
 
         // log
-        emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value, 4);
+        emit PolyWrapperLock(originalToken, _msgSender(), toChainId, toAddress, amount, msg.value, 4);
 
         return true;
     }
@@ -232,7 +232,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         require(IBridge(bridge).depositAndBridgeOut(wethAddress, pTokenAddress, toChainId, toAddress, amount, callData), "depositAndBridgeOut fail");
 
         // log
-        emit PolyWrapperLock(pTokenAddress, _msgSender(), toChainId, toAddress, amount, msg.value.sub(amount), 5);
+        emit PolyWrapperLock(wethAddress, _msgSender(), toChainId, toAddress, amount, msg.value.sub(amount), 5);
 
         return true;
     }
