@@ -4,20 +4,24 @@ pragma solidity ^0.8.0;
 
 import "./Utils.sol";
 import "../access/Ownable.sol";
+import "./interfaces/IBridge.sol";
 import "./interfaces/ICallProxy.sol";
 import "../swap/interfaces/IPool.sol";
 import "../assets/interfaces/IWETH.sol";
 import "../assets/interfaces/IPToken.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract CallProxy is ICallProxy, Ownable {
+    using SafeMath for uint;
     using SafeERC20 for IERC20;
 
     bool public externalCallEnabled;
     address public wethAddress;
     address public bridgeAddress;
+
+    uint256 private constant FEE_DENOMINATOR = 10**10;
 
     event SetWETH(address wethAddress);
     event SetBridge(address bridgeAddress);
@@ -92,8 +96,18 @@ contract CallProxy is ICallProxy, Ownable {
                     return true;
                 }
 
-                // try to withdraw
-                try IPToken(ptoken).withdraw(toAddress, withdrawAmount) {} catch {}
+                if (!IPToken(ptoken).checkIfDepositWithdrawEnabled()) {
+                    uint256 bridgeFeeRate = IBridge(bridgeAddress).bridgeFeeRate();
+                    address feeTo = IBridge(bridgeAddress).bridgeFeeCollector();
+
+                    if (bridgeFeeRate != 0 && feeTo != address(0)) {
+                        uint256 bridgeFee = withdrawAmount.mul(bridgeFeeRate).div(FEE_DENOMINATOR);
+                        withdrawAmount = withdrawAmount.sub(bridgeFee);
+                        _transferFromContract(ptoken, feeTo, bridgeFee);
+                    }
+                } else {
+                    try IPToken(ptoken).withdraw(toAddress, withdrawAmount) {} catch {}
+                }
             } catch { /* do nothing if data is invalid*/ }
         } else if (externalCallEnabled && tag == 0x03) { // external call
             try this.decodeCallDataForExternalCall(callData) returns(address callee,bytes memory data) {
