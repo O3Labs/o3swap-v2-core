@@ -2,17 +2,17 @@
 
 pragma solidity ^0.8.0;
 
-import "../access/Ownable.sol";
-import "./libs/UniswapV2Library.sol";
-import "../assets/interfaces/IWETH.sol";
-import "./interfaces/IUniswapV2Pair.sol";
-import "./interfaces/IUniswapV2Factory.sol";
-import "../crossChain/interfaces/IWrapper.sol";
+import "../../access/Ownable.sol";
+import "./libs/BNBChainPancakeLibrary.sol";
+import "../interfaces/IUniswapV2Pair.sol";
+import "../interfaces/IUniswapV2Factory.sol";
+import "../../assets/interfaces/IWETH.sol";
+import "../../crossChain/interfaces/IWrapper.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract O3UniswapBridge is Ownable {
+contract O3BNBChainPancakeSwapAggregator is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -21,9 +21,9 @@ contract O3UniswapBridge is Ownable {
         uint256 fee
     );
 
-    address public WETH;
-    address public factory;
-    address public O3Wrapper;
+    address public WETH = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address public factory = 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73;
+    address public O3Wrapper = 0xCCB7a45E36f22eDE66b6222A0A55c547E6D516D7;
     address public feeCollector;
 
     uint256 public aggregatorFee = 3 * 10 ** 7;
@@ -31,23 +31,11 @@ contract O3UniswapBridge is Ownable {
     uint256 private constant MAX_AGGREGATOR_FEE = 5*10**8;
 
     modifier ensure(uint deadline) {
-        require(deadline >= block.timestamp, 'O3UniswapBridge: EXPIRED');
+        require(deadline >= block.timestamp, 'O3Aggregator: EXPIRED');
         _;
     }
 
-    constructor (
-        address _weth,
-        address _factory,
-        address _wrapper,
-        address _feeCollector
-    ) {
-        require(_weth != address(0), "O3UniswapBridge: ZERO_WETH_ADDRESS");
-        require(_factory != address(0), "O3UniswapBridge: ZERO_FACTORY_ADDRESS");
-        require(_wrapper != address(0), "O3UniswapBridge: ZERO_WRAPPER_ADDRESS");
-
-        WETH = _weth;
-        factory = _factory;
-        O3Wrapper = _wrapper;
+    constructor (address _feeCollector) {
         feeCollector = _feeCollector;
     }
 
@@ -57,7 +45,7 @@ contract O3UniswapBridge is Ownable {
         WETH = _weth;
     }
 
-    function setUniswapFactory(address _factory) external onlyOwner {
+    function setFactory(address _factory) external onlyOwner {
         factory = _factory;
     }
 
@@ -104,7 +92,7 @@ contract O3UniswapBridge is Ownable {
         uint64 toChainId, bytes memory toAddress, bytes memory callData // args for bridge
     ) external virtual payable ensure(deadline) returns (bool) {
         (uint swapperAmountIn, address tokenFrom) = _swapExactTokensForTokensSupportingFeeOnTransferTokensCrossChain(amountIn, swapAmountOutMin, path);
-        require(minDy <= swapperAmountIn, "O3UniswapBridge: MIN_DY_NOT_SATISFIED");
+        require(minDy <= swapperAmountIn, "O3Aggregator: MIN_DY_NOT_SATISFIED");
 
         IERC20(tokenFrom).safeApprove(O3Wrapper, swapperAmountIn);
 
@@ -131,13 +119,13 @@ contract O3UniswapBridge is Ownable {
         address[] calldata path
     ) internal virtual returns (uint) {
         IERC20(path[0]).safeTransferFrom(
-            msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amountIn
+            msg.sender, BNBChainPancakeLibrary.pairFor(factory, path[0], path[1]), amountIn
         );
 
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(address(this));
         _swapSupportingFeeOnTransferTokens(path, address(this));
         uint amountOut = IERC20(path[path.length - 1]).balanceOf(address(this)).sub(balanceBefore);
-        require(amountOut >= amountOutMin, 'O3UniswapBridge: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amountOut >= amountOutMin, 'O3Aggregator: INSUFFICIENT_OUTPUT_AMOUNT');
         return amountOut;
     }
 
@@ -161,7 +149,7 @@ contract O3UniswapBridge is Ownable {
         uint64 toChainId, bytes memory toAddress, bytes memory callData // args for bridge
     ) external virtual payable ensure(deadline) returns (bool) {
         (uint swapperAmountIn, address tokenFrom) = _swapExactETHForTokensSupportingFeeOnTransferTokensCrossChain(swapAmountOutMin, path, fee);
-        require(minDy <= swapperAmountIn, "O3UniswapBridge: MIN_DY_NOT_SATISFIED");
+        require(minDy <= swapperAmountIn, "O3Aggregator: MIN_DY_NOT_SATISFIED");
 
         IERC20(tokenFrom).safeApprove(O3Wrapper, swapperAmountIn);
 
@@ -187,15 +175,15 @@ contract O3UniswapBridge is Ownable {
         address[] calldata path,
         uint fee
     ) internal virtual returns (uint) {
-        require(path[0] == WETH, 'O3UniswapBridge: INVALID_PATH');
+        require(path[0] == WETH, 'O3Aggregator: INVALID_PATH');
         uint amountIn = msg.value.sub(fee);
-        require(amountIn > 0, 'O3UniswapBridge: INSUFFICIENT_INPUT_AMOUNT');
+        require(amountIn > 0, 'O3Aggregator: INSUFFICIENT_INPUT_AMOUNT');
         IWETH(WETH).deposit{value: amountIn}();
-        assert(IWETH(WETH).transfer(UniswapV2Library.pairFor(factory, path[0], path[1]), amountIn));
+        assert(IWETH(WETH).transfer(BNBChainPancakeLibrary.pairFor(factory, path[0], path[1]), amountIn));
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(address(this));
         _swapSupportingFeeOnTransferTokens(path, address(this));
         uint amountOut = IERC20(path[path.length - 1]).balanceOf(address(this)).sub(balanceBefore);
-        require(amountOut >= swapAmountOutMin, 'O3UniswapBridge: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amountOut >= swapAmountOutMin, 'O3Aggregator: INSUFFICIENT_OUTPUT_AMOUNT');
         return amountOut;
     }
 
@@ -214,7 +202,7 @@ contract O3UniswapBridge is Ownable {
         _chargeETH(feeAmount);
 
         (bool success,) = to.call{value: amountOut.sub(feeAmount)}(new bytes(0));
-        require(success, 'O3UniswapBridge: ETH_TRANSFER_FAILED');
+        require(success, 'O3Aggregator: ETH_TRANSFER_FAILED');
     }
 
     function _swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -222,14 +210,14 @@ contract O3UniswapBridge is Ownable {
         uint swapAmountOutMin,
         address[] calldata path
     ) internal virtual returns (uint) {
-        require(path[path.length - 1] == WETH, 'O3UniswapBridge: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'O3Aggregator: INVALID_PATH');
         IERC20(path[0]).safeTransferFrom(
-            msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amountIn
+            msg.sender, BNBChainPancakeLibrary.pairFor(factory, path[0], path[1]), amountIn
         );
         uint balanceBefore = IERC20(WETH).balanceOf(address(this));
         _swapSupportingFeeOnTransferTokens(path, address(this));
         uint amountOut = IERC20(WETH).balanceOf(address(this)).sub(balanceBefore);
-        require(amountOut >= swapAmountOutMin, 'O3UniswapBridge: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amountOut >= swapAmountOutMin, 'O3Aggregator: INSUFFICIENT_OUTPUT_AMOUNT');
         return amountOut;
     }
 
@@ -239,7 +227,7 @@ contract O3UniswapBridge is Ownable {
 
     function _chargeETH(uint256 feeAmount) internal {
         (bool success,) = feeCollector.call{value:feeAmount}(new bytes(0));
-        require(success, 'O3UniswapBridge: ETH_FEE_CHARGE_FAILED');
+        require(success, 'O3Aggregator: ETH_FEE_CHARGE_FAILED');
     }
 
     // **** SWAP (supporting fee-on-transfer tokens) ****
@@ -247,19 +235,19 @@ contract O3UniswapBridge is Ownable {
     function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal virtual {
         for (uint i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0,) = UniswapV2Library.sortTokens(input, output);
-            require(IUniswapV2Factory(factory).getPair(input, output) != address(0), "O3UniswapBridge: PAIR_NOT_EXIST");
-            IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, input, output));
+            (address token0,) = BNBChainPancakeLibrary.sortTokens(input, output);
+            require(IUniswapV2Factory(factory).getPair(input, output) != address(0), "O3Aggregator: PAIR_NOT_EXIST");
+            IUniswapV2Pair pair = IUniswapV2Pair(BNBChainPancakeLibrary.pairFor(factory, input, output));
             uint amountInput;
             uint amountOutput;
             { // scope to avoid stack too deep errors
                 (uint reserve0, uint reserve1,) = pair.getReserves();
                 (uint reserveInput, uint reserveOutput) = input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
                 amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
-                amountOutput = UniswapV2Library.getAmountOut(amountInput, reserveInput, reserveOutput);
+                amountOutput = BNBChainPancakeLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
             (uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
-            address to = i < path.length - 2 ? UniswapV2Library.pairFor(factory, output, path[i + 2]) : _to;
+            address to = i < path.length - 2 ? BNBChainPancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }

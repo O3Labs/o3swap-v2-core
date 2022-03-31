@@ -161,6 +161,17 @@ const network_fantom_mainnet = {
   skipDryRun: false
 };
 
+const fantom_testnet_rpc = 'https://rpc.testnet.fantom.network/';
+const network_fantom_testnet = {
+  provider: () => new HDWalletProvider(privateKey, fantom_testnet_rpc),
+  network_id: 4002,
+  gas: 600 * 10000,
+  gasPrice: 355 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false
+};
+
 const network_development = {
   host: "127.0.0.1",
   port: 18545,
@@ -172,6 +183,7 @@ const network_development = {
     eth_ropsten: network_eth_ropsten,
     bsc_testnet: network_bsc_testnet,
     arbitrum_rinkeby: network_arbitrum_rinkeby,
+    fantom_testnet: network_fantom_testnet,
   },
 
   mocha: {
