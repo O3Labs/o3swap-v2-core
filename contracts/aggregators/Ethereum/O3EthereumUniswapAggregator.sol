@@ -3,10 +3,11 @@
 pragma solidity ^0.8.0;
 
 import "../../access/Ownable.sol";
-import "./libs/EthereumUniswapV2Library.sol";
+import "../../swap/interfaces/IPool.sol";
 import "../interfaces/IUniswapV2Pair.sol";
-import "../interfaces/IUniswapV2Factory.sol";
 import "../../assets/interfaces/IWETH.sol";
+import "./libs/EthereumUniswapV2Library.sol";
+import "../interfaces/IUniswapV2Factory.sol";
 import "../../crossChain/interfaces/IWrapper.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -21,9 +22,9 @@ contract O3EthereumUniswapAggregator is Ownable {
         uint256 fee
     );
 
-    address public WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public WETH = 0xc778417E063141139Fce010982780140Aa0cD5Ab;
     address public factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address public O3Wrapper = 0xeCF2B548e5c21028B0b60363207700fA421B6EcB;
+    address public O3Wrapper = 0xfaACa57E382Df0728D26751C3e068aa2f34E69Fb;
     address public feeCollector;
 
     uint256 public aggregatorFee = 3 * 10 ** 7;
@@ -71,6 +72,45 @@ contract O3EthereumUniswapAggregator is Ownable {
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
 
+    function swapExactPTokensForTokensSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        address callproxy,
+        address poolAddress,
+        uint poolAmountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline,
+        uint aggSwapAmountOutMin,
+        bool unwrapETH
+    ) external virtual ensure(deadline) {
+        address caller = _msgSender();
+
+        if (callproxy != address(0) && amountIn == 0) {
+            amountIn = IERC20(path[0]).allowance(callproxy, address(this));
+            caller = callproxy;
+        }
+
+        require(amountIn != 0, "O3Aggregator: amountIn cannot be zero");
+        IERC20(path[0]).safeTransferFrom(caller, address(this), amountIn);
+
+        IERC20(path[0]).safeApprove(poolAddress, amountIn);
+        amountIn = IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
+
+        uint amountOut = _swapExactTokensForTokensSupportingFeeOnTransferTokens(false, amountIn, aggSwapAmountOutMin, path[1:]);
+        uint feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
+        emit LOG_AGG_SWAP(amountOut, feeAmount);
+
+        if (unwrapETH) {
+            require(path[path.length - 1] == WETH, "O3Aggregator: INVALID_PATH");
+            IWETH(WETH).withdraw(amountOut);
+            _sendETH(feeCollector, feeAmount);
+            _sendETH(to, amountOut.sub(feeAmount));
+        } else {
+            IERC20(path[path.length-1]).safeTransfer(feeCollector, feeAmount);
+            IERC20(path[path.length-1]).safeTransfer(to, amountOut.sub(feeAmount));
+        }
+    }
+
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint amountIn,
         uint swapAmountOutMin,
@@ -78,11 +118,11 @@ contract O3EthereumUniswapAggregator is Ownable {
         address to,
         uint deadline
     ) external virtual ensure(deadline) {
-        uint amountOut = _swapExactTokensForTokensSupportingFeeOnTransferTokens(amountIn, swapAmountOutMin, path);
+        uint amountOut = _swapExactTokensForTokensSupportingFeeOnTransferTokens(true, amountIn, swapAmountOutMin, path);
         uint feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
-        _chargeERC20(IERC20(path[path.length-1]), feeAmount);
         emit LOG_AGG_SWAP(amountOut, feeAmount);
 
+        IERC20(path[path.length-1]).safeTransfer(feeCollector, feeAmount);
         IERC20(path[path.length-1]).safeTransfer(to, amountOut.sub(feeAmount));
     }
 
@@ -105,22 +145,27 @@ contract O3EthereumUniswapAggregator is Ownable {
     function _swapExactTokensForTokensSupportingFeeOnTransferTokensCrossChain(
         uint amountIn, uint swapAmountOutMin, address[] calldata path
     ) internal returns (uint256, address) {
-        uint amountOut = _swapExactTokensForTokensSupportingFeeOnTransferTokens(amountIn, swapAmountOutMin, path);
+        uint amountOut = _swapExactTokensForTokensSupportingFeeOnTransferTokens(true, amountIn, swapAmountOutMin, path);
         uint feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
-        _chargeERC20(IERC20(path[path.length-1]), feeAmount);
+        IERC20(path[path.length-1]).safeTransfer(feeCollector, feeAmount);
         emit LOG_AGG_SWAP(amountOut, feeAmount);
 
         return (amountOut.sub(feeAmount), path[path.length-1]);
     }
 
     function _swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        bool pull,
         uint amountIn,
         uint amountOutMin,
         address[] calldata path
     ) internal virtual returns (uint) {
-        IERC20(path[0]).safeTransferFrom(
-            msg.sender, EthereumUniswapV2Library.pairFor(factory, path[0], path[1]), amountIn
-        );
+        if (pull) {
+            IERC20(path[0]).safeTransferFrom(
+                msg.sender, EthereumUniswapV2Library.pairFor(factory, path[0], path[1]), amountIn
+            );
+        } else {
+            IERC20(path[0]).safeTransfer(EthereumUniswapV2Library.pairFor(factory, path[0], path[1]), amountIn);
+        }
 
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(address(this));
         _swapSupportingFeeOnTransferTokens(path, address(this));
@@ -137,9 +182,9 @@ contract O3EthereumUniswapAggregator is Ownable {
     ) external virtual payable ensure(deadline) {
         uint amountOut = _swapExactETHForTokensSupportingFeeOnTransferTokens(swapAmountOutMin, path, 0);
         uint feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
-        _chargeERC20(IERC20(path[path.length - 1]), feeAmount);
         emit LOG_AGG_SWAP(amountOut, feeAmount);
 
+        IERC20(path[path.length-1]).safeTransfer(feeCollector, feeAmount);
         IERC20(path[path.length - 1]).safeTransfer(to, amountOut.sub(feeAmount));
     }
 
@@ -164,7 +209,7 @@ contract O3EthereumUniswapAggregator is Ownable {
     ) internal returns (uint, address) {
         uint amountOut = _swapExactETHForTokensSupportingFeeOnTransferTokens(swapAmountOutMin, path, fee);
         uint feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
-        _chargeERC20(IERC20(path[path.length-1]), feeAmount);
+        IERC20(path[path.length-1]).safeTransfer(feeCollector, feeAmount);
         emit LOG_AGG_SWAP(amountOut, feeAmount);
 
         return (amountOut.sub(feeAmount), path[path.length-1]);
@@ -199,10 +244,9 @@ contract O3EthereumUniswapAggregator is Ownable {
         emit LOG_AGG_SWAP(amountOut, feeAmount);
 
         IWETH(WETH).withdraw(amountOut);
-        _chargeETH(feeAmount);
 
-        (bool success,) = to.call{value: amountOut.sub(feeAmount)}(new bytes(0));
-        require(success, 'O3Aggregator: ETH_TRANSFER_FAILED');
+        _sendETH(feeCollector, feeAmount);
+        _sendETH(to, amountOut.sub(feeAmount));
     }
 
     function _swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -221,13 +265,9 @@ contract O3EthereumUniswapAggregator is Ownable {
         return amountOut;
     }
 
-    function _chargeERC20(IERC20 token, uint256 feeAmount) internal {
-        token.safeTransfer(feeCollector, feeAmount);
-    }
-
-    function _chargeETH(uint256 feeAmount) internal {
-        (bool success,) = feeCollector.call{value:feeAmount}(new bytes(0));
-        require(success, 'O3Aggregator: ETH_FEE_CHARGE_FAILED');
+    function _sendETH(address to, uint256 amount) internal {
+        (bool success,) = to.call{value:amount}(new bytes(0));
+        require(success, 'O3Aggregator: ETH_TRANSFER_FAILED');
     }
 
     // **** SWAP (supporting fee-on-transfer tokens) ****
