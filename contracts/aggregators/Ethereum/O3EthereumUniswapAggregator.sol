@@ -18,18 +18,18 @@ contract O3EthereumUniswapAggregator is Ownable {
     using SafeERC20 for IERC20;
 
     event LOG_AGG_SWAP (
-        uint256 amountOut, // Raw swapped token amount out without aggFee
+        uint256 amountOut,
         uint256 fee
     );
 
-    address public WETH = 0xc778417E063141139Fce010982780140Aa0cD5Ab;
+    address public WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public factory = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-    address public O3Wrapper = 0xfaACa57E382Df0728D26751C3e068aa2f34E69Fb;
+    address public O3Wrapper = 0xeCF2B548e5c21028B0b60363207700fA421B6EcB;
     address public feeCollector;
 
     uint256 public aggregatorFee = 3 * 10 ** 7;
     uint256 public constant FEE_DENOMINATOR = 10 ** 10;
-    uint256 private constant MAX_AGGREGATOR_FEE = 5*10**8;
+    uint256 private constant MAX_AGGREGATOR_FEE = 5 * 10**8;
 
     modifier ensure(uint deadline) {
         require(deadline >= block.timestamp, 'O3Aggregator: EXPIRED');
@@ -127,12 +127,11 @@ contract O3EthereumUniswapAggregator is Ownable {
     }
 
     function swapExactTokensForTokensSupportingFeeOnTransferTokensCrossChain(
-        uint amountIn, uint swapAmountOutMin, address[] calldata path, // args for dex
-        address poolAddress, address tokenTo, uint256 minDy, uint256 deadline,   // args for swap
-        uint64 toChainId, bytes memory toAddress, bytes memory callData // args for bridge
+        uint amountIn, uint swapAmountOutMin, address[] calldata path,         // args for dex
+        address poolAddress, address tokenTo, uint256 minDy, uint256 deadline, // args for swap
+        uint64 toChainId, bytes memory toAddress, bytes memory callData        // args for wrapper
     ) external virtual payable ensure(deadline) returns (bool) {
         (uint swapperAmountIn, address tokenFrom) = _swapExactTokensForTokensSupportingFeeOnTransferTokensCrossChain(amountIn, swapAmountOutMin, path);
-        require(minDy <= swapperAmountIn, "O3Aggregator: MIN_DY_NOT_SATISFIED");
 
         IERC20(tokenFrom).safeApprove(O3Wrapper, swapperAmountIn);
 
@@ -189,12 +188,11 @@ contract O3EthereumUniswapAggregator is Ownable {
     }
 
     function swapExactETHForTokensSupportingFeeOnTransferTokensCrossChain(
-        uint swapAmountOutMin, address[] calldata path, uint fee, // args for dex
-        address poolAddress, address tokenTo, uint256 minDy, uint256 deadline,   // args for swap
-        uint64 toChainId, bytes memory toAddress, bytes memory callData // args for bridge
+        uint swapAmountOutMin, address[] calldata path, uint fee,              // args for dex
+        address poolAddress, address tokenTo, uint256 minDy, uint256 deadline, // args for swap
+        uint64 toChainId, bytes memory toAddress, bytes memory callData        // args for wrapper
     ) external virtual payable ensure(deadline) returns (bool) {
         (uint swapperAmountIn, address tokenFrom) = _swapExactETHForTokensSupportingFeeOnTransferTokensCrossChain(swapAmountOutMin, path, fee);
-        require(minDy <= swapperAmountIn, "O3Aggregator: MIN_DY_NOT_SATISFIED");
 
         IERC20(tokenFrom).safeApprove(O3Wrapper, swapperAmountIn);
 
