@@ -103,9 +103,9 @@ const network_arbitrum_rinkeby = {
   skipDryRun: false
 };
 
-const oec_mainnet_rpc = 'https://exchainrpc.okex.org';
-const network_oec_mainnet = {
-  provider: () => new HDWalletProvider(privateKey, oec_mainnet_rpc),
+const okc_mainnet_rpc = 'https://exchainrpc.okex.org';
+const network_okc_mainnet = {
+  provider: () => new HDWalletProvider(privateKey, okc_mainnet_rpc),
   network_id: 66,
   gas: 220 * 10000,
   gasPrice: 1 * 10**9,
@@ -128,9 +128,9 @@ const network_avalanche_mainnet = {
   gasPrice: 40 * 10**9,
 };
 
-const xdai_mainnet_rpc = 'https://rpc.xdaichain.com';
-const network_xdai_mainnet = {
-  provider: () => new HDWalletProvider(privateKey, xdai_mainnet_rpc),
+const gnosis_mainnet_rpc = 'https://rpc.xdaichain.com';
+const network_gnosis_mainnet = {
+  provider: () => new HDWalletProvider(privateKey, gnosis_mainnet_rpc),
   network_id: 100,
   gas: 150 * 10000,
   gasPrice: 22 * 10**9,
@@ -180,6 +180,17 @@ const network_development = {
 
  module.exports = {
   networks: {
+    eth: network_eth_mainnet,
+    bsc: network_bsc_mainnet,
+    heco: network_heco_mainnet,
+    arbitrum: network_arbitrum_mainnet,
+    polygon: network_polygon_mainnet,
+    gnosis: network_gnosis_mainnet,
+    fantom: network_fantom_mainnet,
+    avalanche: network_avalanche_mainnet,
+    optimism: network_optimism_mainnet,
+    okc: network_okc_mainnet,
+
     eth_ropsten: network_eth_ropsten,
     bsc_testnet: network_bsc_testnet,
     arbitrum_rinkeby: network_arbitrum_rinkeby,
@@ -206,7 +217,7 @@ const network_development = {
       settings: {
        optimizer: {
          enabled: true,
-         runs: 200
+         runs: 999999
        },
        evmVersion: "istanbul"
       }
