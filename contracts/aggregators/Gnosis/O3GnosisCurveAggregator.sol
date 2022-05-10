@@ -177,6 +177,8 @@ contract O3GnosisCurveAggregator is Ownable {
             amountIn, curvePoolAddr, curvePoolMinDy, path
         );
 
+        IERC20(path[1]).safeApprove(O3Wrapper, crossChainAmount);
+
         IWrapper(O3Wrapper).swapAndBridgeOut{value: msg.value}(
             ptokenPoolAddr, path[1], ptokenAddr, crossChainAmount, ptokenPoolMinDy, deadline,
             toChainId, toAddress, callData
@@ -226,6 +228,8 @@ contract O3GnosisCurveAggregator is Ownable {
         uint256 crossChainAmount = _exchangeTokensForTokensCrossChain(
             msg.value.sub(fee), curvePoolAddr, curvePoolMinDy, path
         );
+
+        IERC20(path[1]).safeApprove(O3Wrapper, crossChainAmount);
 
         IWrapper(O3Wrapper).swapAndBridgeOut{value: fee}(
             ptokenPoolAddr, path[1], ptokenAddr, crossChainAmount, ptokenPoolMinDy, deadline,
