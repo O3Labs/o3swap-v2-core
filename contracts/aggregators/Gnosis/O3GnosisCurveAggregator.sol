@@ -24,7 +24,7 @@ contract O3GnosisCurveAggregator is Ownable {
     address public O3Wrapper = 0x426223eef2e4f577767533aa1854E8b980b1Df5F;
     address public feeCollector;
 
-    uint256 public aggregatorFee = 3 * 10 ** 7;
+    uint256 public aggregatorFee = 1 * 10 ** 6;
     uint256 public constant FEE_DENOMINATOR = 10 ** 10;
     uint256 private constant MAX_AGGREGATOR_FEE = 5 * 10**8;
 

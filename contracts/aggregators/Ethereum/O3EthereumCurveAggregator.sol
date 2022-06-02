@@ -24,7 +24,7 @@ contract O3EthereumCurveAggregator is Ownable {
     address public O3Wrapper = 0xeCF2B548e5c21028B0b60363207700fA421B6EcB;
     address public feeCollector;
 
-    uint256 public aggregatorFee = 3 * 10 ** 7;
+    uint256 public aggregatorFee = 1 * 10 ** 6;
     uint256 public constant FEE_DENOMINATOR = 10 ** 10;
     uint256 private constant MAX_AGGREGATOR_FEE = 5 * 10**8;
 

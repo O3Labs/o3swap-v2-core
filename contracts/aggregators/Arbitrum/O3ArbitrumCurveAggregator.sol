@@ -24,7 +24,7 @@ contract O3ArbitrumCurveAggregator is Ownable {
     address public O3Wrapper = 0x446eb3aC5e6267931eD1198203B12CAfcd2E6240;
     address public feeCollector;
 
-    uint256 public aggregatorFee = 3 * 10 ** 7;
+    uint256 public aggregatorFee = 1 * 10 ** 6;
     uint256 public constant FEE_DENOMINATOR = 10 ** 10;
     uint256 private constant MAX_AGGREGATOR_FEE = 5 * 10**8;
 
