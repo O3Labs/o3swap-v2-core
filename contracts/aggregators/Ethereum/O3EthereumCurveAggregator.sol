@@ -145,6 +145,8 @@ contract O3EthereumCurveAggregator is Ownable {
         address toAddress,
         uint256 deadline
     ) external virtual ensure(deadline) {
+        IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
+
         (uint256 amountOut, uint256 feeAmount) = _exchangeTokensForTokens(
             amountIn, curvePoolAddr, curvePoolMinDy, path
         );
@@ -159,8 +161,6 @@ contract O3EthereumCurveAggregator is Ownable {
         uint256 curvePoolMinDy,
         address[] calldata path
     ) internal returns (uint256, uint256) {
-        IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
-
         uint256 amountOut = _curveSwap(curvePoolAddr, amountIn, path, curvePoolMinDy);
         uint256 feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
         emit LOG_AGG_SWAP(amountOut, feeAmount);
@@ -173,6 +173,8 @@ contract O3EthereumCurveAggregator is Ownable {
         address ptokenPoolAddr, address ptokenAddr, uint256 ptokenPoolMinDy,
         uint64 toChainId, bytes memory toAddress, bytes memory callData, uint256 deadline
     ) external virtual payable ensure(deadline) {
+        IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
+
         uint256 crossChainAmount = _exchangeTokensForTokensCrossChain(
             amountIn, curvePoolAddr, curvePoolMinDy, path
         );
