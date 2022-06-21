@@ -7,6 +7,7 @@ import "../access/Ownable.sol";
 import "./interfaces/IBridge.sol";
 import "./interfaces/ICallProxy.sol";
 import "../assets/interfaces/IPToken.sol";
+import "./interfaces/IDailyVolumeLimiter.sol";
 import "./interfaces/IEthCrossChainManager.sol";
 import "./interfaces/IEthCrossChainManagerProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -34,6 +35,7 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     address public bridgeFeeCollector;
     address public callProxy;
     address public managerProxyContract;
+    address public volumeLimiter;
 
     mapping(uint64 => bytes) public bridgeHashMap;
     mapping(address => mapping(uint64 => bytes)) public assetHashMap;
@@ -76,6 +78,15 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     function setManagerProxy(address ethCCMProxyAddr) onlyOwner public {
         managerProxyContract = ethCCMProxyAddr;
         emit SetManagerProxyEvent(managerProxyContract);
+    }
+
+    function setVolumeLimiter(address _limiter) external onlyOwner {
+        if (_limiter != address(0)) {
+            IDailyVolumeLimiter limiter = IDailyVolumeLimiter(_limiter);
+            require(limiter.isCallerAuthorized(address(this)), "authorize bridge contract before set");
+        }
+
+        volumeLimiter = _limiter;
     }
 
     function bindBridge(uint64 toChainId, bytes memory targetBridge) onlyOwner public returns (bool) {
@@ -196,6 +207,11 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     ) internal returns(bool) {
         bytes memory toAssetHash = assetHashMap[fromAssetHash][toChainId];
         require(toAssetHash.length != 0, "empty illegal toAssetHash");
+
+        if (volumeLimiter != address(0)) {
+            IDailyVolumeLimiter limiter = IDailyVolumeLimiter(volumeLimiter);
+            require(limiter.accumulate(fromAssetHash, amount), "volume exceeds cumulative daily limit");
+        }
 
         {
             TxArgs memory txArgs = TxArgs({
