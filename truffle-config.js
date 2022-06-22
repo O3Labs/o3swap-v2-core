@@ -150,6 +150,17 @@ const network_optimism_mainnet = {
   skipDryRun: false
 };
 
+const optimism_testnet_rpc = 'https://kovan.optimism.io';
+const network_optimism_testnet = {
+  provider: () => new HDWalletProvider(privateKey, optimism_testnet_rpc),
+  network_id: 69,
+  gas: 10 * 10000,
+  gasPrice: 0.00001 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false
+};
+
 const fantom_mainnet_rpc = 'https://rpc.ftm.tools';
 const network_fantom_mainnet = {
   provider: () => new HDWalletProvider(privateKey, fantom_mainnet_rpc),
@@ -195,6 +206,7 @@ const network_development = {
     bsc_testnet: network_bsc_testnet,
     arbitrum_rinkeby: network_arbitrum_rinkeby,
     fantom_testnet: network_fantom_testnet,
+    optimism_testnet: network_optimism_testnet,
   },
 
   mocha: {
