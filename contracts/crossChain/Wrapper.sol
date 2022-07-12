@@ -50,6 +50,8 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
     }
 
     function setBridgeContract(address _bridge) public onlyOwner {
+        require(_bridge != address(0), "address cannot be zero");
+
         bridge = _bridge;
         emit SetBridgeContract(bridge);
     }
@@ -60,6 +62,8 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
     }
 
     function setWETHAddress(address _weth) public onlyOwner {
+        require(_weth != address(0), "address cannot be zero");
+
         wethAddress = _weth;
         emit SetWETHAddress(wethAddress);
     }

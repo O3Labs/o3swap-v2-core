@@ -34,11 +34,15 @@ contract CallProxy is ICallProxy, Ownable {
     }
 
     function setWETH(address _wethAddress) public onlyOwner {
+        require(_wethAddress != address(0), "CallProxy: address cannot be zero");
+
         wethAddress = _wethAddress;
         emit SetWETH(_wethAddress);
     }
 
     function setBridge(address _bridgeAddress) public onlyOwner {
+        require(_bridgeAddress != address(0), "CallProxy: address cannot be zero");
+
         bridgeAddress = _bridgeAddress;
         emit SetBridge(bridgeAddress);
     }

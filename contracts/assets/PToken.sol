@@ -42,6 +42,8 @@ contract PToken is ERC20, Ownable {
     }
 
     constructor (string memory name_, string memory symbol_, address tokenUnderlying_) ERC20(name_, symbol_) {
+        require(tokenUnderlying_ != address(0), "PTOKEN: address cannot be zero");
+
         _decimals = 18;
         _underlyingTokenDecimals = ERC20(tokenUnderlying_).decimals();
         _tokenUnderlying = tokenUnderlying_;

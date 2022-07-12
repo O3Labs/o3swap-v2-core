@@ -69,6 +69,7 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     }
 
     function setManagerProxy(address ethCCMProxyAddr) onlyOwner public {
+        require(ethCCMProxyAddr != address(0), "address cannot be zero");
         managerProxyContract = ethCCMProxyAddr;
         emit SetManagerProxyEvent(managerProxyContract);
     }
