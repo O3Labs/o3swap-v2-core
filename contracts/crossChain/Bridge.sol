@@ -28,7 +28,6 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         bytes callData;
     }
 
-    bool isInitialized = true;
     uint256 private constant FEE_DENOMINATOR = 10**10;
 
     uint256 public bridgeFeeRate;
@@ -52,16 +51,6 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         IEthCrossChainManagerProxy ieccmp = IEthCrossChainManagerProxy(managerProxyContract);
         require(_msgSender() == ieccmp.getEthCrossChainManager(), "msgSender is not EthCrossChainManagerContract");
         _;
-    }
-
-    modifier initialization() {
-        require(!isInitialized, "Already initialized");
-        _;
-        isInitialized = true;
-    }
-
-    function initialize(address initOwner) public initialization {
-        _transferOwnership(initOwner);
     }
 
     function setBridgeFee(uint256 _rate, address _feeCollector) public onlyOwner {
