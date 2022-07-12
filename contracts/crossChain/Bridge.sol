@@ -143,7 +143,10 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         // transfer_to_this + deposit + burn = transfer_to_ptoken
         require(IPToken(pTokenAddress).tokenUnderlying() == originalTokenAddress, "invalid originalToken / pToken");
         require(IPToken(pTokenAddress).checkIfDepositWithdrawEnabled(), "ptoken deposit/withdraw not enabled");
+
+        uint256 balanceBefore = IERC20(originalTokenAddress).balanceOf(pTokenAddress);
         IERC20(originalTokenAddress).safeTransferFrom(_msgSender(), pTokenAddress, amount);
+        amount = IERC20(originalTokenAddress).balanceOf(pTokenAddress).sub(balanceBefore);
 
         // precision conversion
         uint8 ptokenDecimals = ERC20(pTokenAddress).decimals();
