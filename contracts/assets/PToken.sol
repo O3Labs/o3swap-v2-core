@@ -54,7 +54,7 @@ contract PToken is ERC20, Ownable {
         return _decimals;
     }
 
-    function tokenUnderlying() public view returns(address) {
+    function tokenUnderlying() external view returns(address) {
         return _tokenUnderlying;
     }
 

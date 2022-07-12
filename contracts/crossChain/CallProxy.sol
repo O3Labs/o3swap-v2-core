@@ -33,26 +33,26 @@ contract CallProxy is ICallProxy, Ownable {
         _;
     }
 
-    function setWETH(address _wethAddress) public onlyOwner {
+    function setWETH(address _wethAddress) external onlyOwner {
         require(_wethAddress != address(0), "CallProxy: address cannot be zero");
 
         wethAddress = _wethAddress;
         emit SetWETH(_wethAddress);
     }
 
-    function setBridge(address _bridgeAddress) public onlyOwner {
+    function setBridge(address _bridgeAddress) external onlyOwner {
         require(_bridgeAddress != address(0), "CallProxy: address cannot be zero");
 
         bridgeAddress = _bridgeAddress;
         emit SetBridge(bridgeAddress);
     }
 
-    function enableExternalCall() public onlyOwner {
+    function enableExternalCall() external onlyOwner {
         externalCallEnabled = true;
         emit EnableExternalCall();
     }
 
-    function disableExternalCall() public onlyOwner {
+    function disableExternalCall() external onlyOwner {
         externalCallEnabled = false;
         emit DisableExternalCall();
     }
@@ -67,7 +67,7 @@ contract CallProxy is ICallProxy, Ownable {
         if (tag == 0x01) { // swap
             // decode data
             try this.decodeCallDataForSwap(callData)
-            returns(address poolAddress,bool unwrapETH,bool swapAll,uint8 tokenIndexFrom, uint8 tokenIndexTo,uint256 dx,uint256 dy,uint256 deadline)
+            returns(address poolAddress, bool unwrapETH, bool swapAll, uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx, uint256 dy, uint256 deadline)
             {
                 // check from token address
                 if (address(IPool(poolAddress).coins(tokenIndexFrom)) != ptoken) {
@@ -114,7 +114,7 @@ contract CallProxy is ICallProxy, Ownable {
                 }
             } catch { /* do nothing if data is invalid*/ }
         } else if (externalCallEnabled && tag == 0x03) { // external call
-            try this.decodeCallDataForExternalCall(callData) returns(address callee,bytes memory data) {
+            try this.decodeCallDataForExternalCall(callData) returns(address callee, bytes memory data) {
                 // approve ptoken
                 IERC20(ptoken).safeApprove(callee, 0);
                 IERC20(ptoken).safeApprove(callee, amount);
@@ -143,7 +143,7 @@ contract CallProxy is ICallProxy, Ownable {
         }
     }
 
-    function decodeCallDataForSwap(bytes memory callData) public pure returns (
+    function decodeCallDataForSwap(bytes memory callData) external pure returns (
         address poolAddress,
         bool unwrapETH,
         bool swapAll,
@@ -182,7 +182,7 @@ contract CallProxy is ICallProxy, Ownable {
         uint256 dx,
         uint256 minDy,
         uint256 deadline
-    ) public pure returns(bytes memory) {
+    ) external pure returns(bytes memory) {
         bytes memory buff;
         buff = abi.encodePacked(
             Utils.WriteByte(0x01),
@@ -197,7 +197,7 @@ contract CallProxy is ICallProxy, Ownable {
         return buff;
     }
 
-    function decodeCallDataForWithdraw(bytes memory callData) public pure returns(
+    function decodeCallDataForWithdraw(bytes memory callData) external pure returns(
         address ptokenAddress,
         address toAddress,
         uint256 amount
@@ -218,7 +218,7 @@ contract CallProxy is ICallProxy, Ownable {
         bytes memory ptokenAddress,
         bytes memory toAddress,
         uint256 amount
-    ) public pure returns(bytes memory) {
+    ) external pure returns(bytes memory) {
         bytes memory buff;
         buff = abi.encodePacked(
             Utils.WriteByte(0x02),
@@ -229,7 +229,7 @@ contract CallProxy is ICallProxy, Ownable {
         return buff;
     }
 
-    function decodeCallDataForExternalCall(bytes memory callData) public pure returns(
+    function decodeCallDataForExternalCall(bytes memory callData) external pure returns(
         address callee,
         bytes memory data
     ){
@@ -244,7 +244,7 @@ contract CallProxy is ICallProxy, Ownable {
     function encodeArgsForExternalCall(
         bytes memory callee,
         bytes memory data
-    ) public pure returns(bytes memory) {
+    ) external pure returns(bytes memory) {
         bytes memory buff;
         buff = abi.encodePacked(
             Utils.WriteByte(0x03),

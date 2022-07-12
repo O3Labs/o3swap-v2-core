@@ -49,30 +49,30 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         _unpause();
     }
 
-    function setBridgeContract(address _bridge) public onlyOwner {
+    function setBridgeContract(address _bridge) external onlyOwner {
         require(_bridge != address(0), "address cannot be zero");
 
         bridge = _bridge;
         emit SetBridgeContract(bridge);
     }
 
-    function setFeeCollector(address _feeCollector) public onlyOwner {
+    function setFeeCollector(address _feeCollector) external onlyOwner {
         feeCollector = _feeCollector;
         emit SetFeeCollector(feeCollector);
     }
 
-    function setWETHAddress(address _weth) public onlyOwner {
+    function setWETHAddress(address _weth) external onlyOwner {
         require(_weth != address(0), "address cannot be zero");
 
         wethAddress = _weth;
         emit SetWETHAddress(wethAddress);
     }
 
-    function extractFee() public onlyFeeCollector {
+    function extractFee() external onlyFeeCollector {
         payable(feeCollector).transfer(address(this).balance);
     }
 
-    function rescueFund(address tokenAddress) public onlyOwner {
+    function rescueFund(address tokenAddress) external onlyOwner {
         IERC20 token = IERC20(tokenAddress);
         token.safeTransfer(_msgSender(), token.balanceOf(address(this)));
     }
@@ -83,7 +83,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         uint64 toChainId,
         bytes memory toAddress,
         bytes memory callData
-    ) public payable nonReentrant whenNotPaused returns(bool) {
+    ) external payable nonReentrant whenNotPaused returns(bool) {
         // check
         require(toAddress.length != 0, "empty toAddress");
         address addr;
@@ -107,7 +107,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
     function swapAndBridgeOut(
         address poolAddress, address tokenFrom, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline, // args for swap
         uint64 toChainId, bytes memory toAddress, bytes memory callData                                       // args for bridge
-    ) public payable nonReentrant whenNotPaused returns(bool) {
+    ) external payable nonReentrant whenNotPaused returns(bool) {
         uint256 balanceBefore = IERC20(tokenTo).balanceOf(address(this));
         {
             // check
@@ -143,7 +143,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
     function swapAndBridgeOutNativeToken(
         address poolAddress, address tokenTo, uint256 dx, uint256 minDy, uint256 deadline, // args for swap
         uint64 toChainId, bytes memory toAddress, bytes memory callData                    // args for bridge
-    ) public payable nonReentrant whenNotPaused returns(bool) {
+    ) external payable nonReentrant whenNotPaused returns(bool) {
         require(msg.value >= dx, "insufficient fund");
         uint256 balanceBefore = IERC20(tokenTo).balanceOf(address(this));
         {
@@ -184,7 +184,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         uint64 toChainId,
         bytes memory toAddress,
         bytes memory callData
-    ) public payable nonReentrant whenNotPaused returns(bool) {
+    ) external payable nonReentrant whenNotPaused returns(bool) {
         {
             // check
             require(IPToken(pTokenAddress).tokenUnderlying() == originalToken, "invalid ptoken / originalToken");
@@ -215,7 +215,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         uint64 toChainId,
         bytes memory toAddress,
         bytes memory callData
-    ) public payable nonReentrant whenNotPaused returns(bool) {
+    ) external payable nonReentrant whenNotPaused returns(bool) {
         require(msg.value >= amount, "insufficient fund");
         {
             // check
@@ -246,7 +246,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         uint64 toChainId,
         bytes memory toAddress,
         uint256 amount
-    ) public payable nonReentrant whenNotPaused returns(bool) {
+    ) external payable nonReentrant whenNotPaused returns(bool) {
         // check
         require(toAddress.length !=0, "empty toAddress");
         address addr;

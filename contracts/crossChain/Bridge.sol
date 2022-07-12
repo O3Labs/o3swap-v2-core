@@ -55,7 +55,7 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         _;
     }
 
-    function setBridgeFee(uint256 _rate, address _feeCollector) public onlyOwner {
+    function setBridgeFee(uint256 _rate, address _feeCollector) external onlyOwner {
         require(_rate <= MAX_BRIDGE_FEE_RATE, "new bridge fee rate exceeds maximum");
 
         bridgeFeeRate = _rate;
@@ -63,12 +63,12 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         emit setBridgeFeeEvent(_rate, _feeCollector);
     }
 
-    function setCallProxy(address _callProxy) onlyOwner public {
+    function setCallProxy(address _callProxy) onlyOwner external {
         callProxy = _callProxy;
         emit SetCallProxyEvent(_callProxy);
     }
 
-    function setManagerProxy(address ethCCMProxyAddr) onlyOwner public {
+    function setManagerProxy(address ethCCMProxyAddr) onlyOwner external {
         require(ethCCMProxyAddr != address(0), "address cannot be zero");
         managerProxyContract = ethCCMProxyAddr;
         emit SetManagerProxyEvent(managerProxyContract);
@@ -83,19 +83,19 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         volumeLimiter = _limiter;
     }
 
-    function bindBridge(uint64 toChainId, bytes memory targetBridge) onlyOwner public returns (bool) {
+    function bindBridge(uint64 toChainId, bytes calldata targetBridge) onlyOwner external returns (bool) {
         bridgeHashMap[toChainId] = targetBridge;
         emit BindBridgeEvent(toChainId, targetBridge);
         return true;
     }
 
-    function bindAssetHash(address fromAssetHash, uint64 toChainId, bytes memory toAssetHash) onlyOwner public returns (bool) {
+    function bindAssetHash(address fromAssetHash, uint64 toChainId, bytes calldata toAssetHash) onlyOwner external returns (bool) {
         assetHashMap[fromAssetHash][toChainId] = toAssetHash;
         emit BindAssetEvent(fromAssetHash, toChainId, toAssetHash);
         return true;
     }
 
-    function bindBridgeBatch(uint64[] memory toChainIds, bytes[] memory targetBridgeHashes) onlyOwner public returns(bool) {
+    function bindBridgeBatch(uint64[] calldata toChainIds, bytes[] calldata targetBridgeHashes) onlyOwner external returns (bool) {
         require(toChainIds.length == targetBridgeHashes.length, "Inconsistent parameter lengths");
         for (uint i=0; i<toChainIds.length; i++) {
             bridgeHashMap[toChainIds[i]] = targetBridgeHashes[i];
@@ -104,7 +104,7 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         return true;
     }
 
-    function bindAssetHashBatch(address[] memory fromAssetHashs, uint64[] memory toChainIds, bytes[] memory toAssetHashes) onlyOwner public returns(bool) {
+    function bindAssetHashBatch(address[] calldata fromAssetHashs, uint64[] calldata toChainIds, bytes[] calldata toAssetHashes) onlyOwner external returns(bool) {
         require(toChainIds.length == fromAssetHashs.length, "Inconsistent parameter lengths");
         require(toChainIds.length == toAssetHashes.length, "Inconsistent parameter lengths");
         for (uint i=0; i<toChainIds.length; i++) {
@@ -126,10 +126,10 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
         address originalTokenAddress,
         address pTokenAddress,
         uint64 toChainId,
-        bytes memory toAddress,
+        bytes calldata toAddress,
         uint256 amount,
-        bytes memory callData
-    ) public override nonReentrant whenNotPaused returns(bool) {
+        bytes calldata callData
+    ) external override nonReentrant whenNotPaused returns(bool) {
         require(amount != 0, "amount cannot be zero!");
 
         // no bridge fee for deposit
@@ -154,9 +154,9 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     function bridgeOutAndWithdraw(
         address fromAssetHash,
         uint64 toChainId,
-        bytes memory toAddress,
+        bytes calldata toAddress,
         uint256 amount
-    ) public override nonReentrant whenNotPaused returns(bool) {
+    ) external override nonReentrant whenNotPaused returns(bool) {
         require(amount != 0, "amount cannot be zero!");
 
         // no bridge fee for withdraw
@@ -174,10 +174,10 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     function bridgeOut(
         address fromAssetHash,
         uint64 toChainId,
-        bytes memory toAddress,
+        bytes calldata toAddress,
         uint256 amount,
-        bytes memory callData
-    ) public override nonReentrant whenNotPaused returns(bool) {
+        bytes calldata callData
+    ) external override nonReentrant whenNotPaused returns(bool) {
         require(amount != 0, "amount cannot be zero!");
 
         // check if bridge fee is required
@@ -198,7 +198,7 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     function _bridgeOut(
         address fromAssetHash,
         uint64 toChainId,
-        bytes memory toAddress,
+        bytes calldata toAddress,
         uint256 amount,
         bytes memory callData
     ) internal returns(bool) {
@@ -232,10 +232,10 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     }
 
     function bridgeIn(
-        bytes memory argsBs,
-        bytes memory fromContractAddr,
+        bytes calldata argsBs,
+        bytes calldata fromContractAddr,
         uint64 fromChainId
-    ) onlyManagerContract public nonReentrant whenNotPaused returns (bool) {
+    ) onlyManagerContract external nonReentrant whenNotPaused returns (bool) {
         TxArgs memory args = _deserializeTxArgs(argsBs);
 
         require(fromContractAddr.length != 0, "from proxy contract address cannot be empty");
