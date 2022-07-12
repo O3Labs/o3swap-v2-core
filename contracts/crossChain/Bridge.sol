@@ -31,6 +31,8 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     uint256 private constant FEE_DENOMINATOR = 10**10;
 
     uint256 public bridgeFeeRate;
+    uint256 private constant MAX_BRIDGE_FEE_RATE = 5*10**8;
+
     address public bridgeFeeCollector;
     address public callProxy;
     address public managerProxyContract;
@@ -54,6 +56,8 @@ contract Bridge is Ownable, IBridge, Pausable, ReentrancyGuard {
     }
 
     function setBridgeFee(uint256 _rate, address _feeCollector) public onlyOwner {
+        require(_rate <= MAX_BRIDGE_FEE_RATE, "new bridge fee rate exceeds maximum");
+
         bridgeFeeRate = _rate;
         bridgeFeeCollector = _feeCollector;
         emit setBridgeFeeEvent(_rate, _feeCollector);
