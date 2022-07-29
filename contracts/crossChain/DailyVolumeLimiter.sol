@@ -6,7 +6,7 @@ import "../access/Ownable.sol";
 import "../crossChain/interfaces/IDailyVolumeLimiter.sol";
 
 contract DailyVolumeLimiter is Ownable, IDailyVolumeLimiter {
-    uint256 public day;
+    mapping(address => uint256) public dayMap;
     mapping(address => uint256) public dailyVolumeMap;
     mapping(address => uint256) public volumeLimitMap;
 
@@ -31,10 +31,10 @@ contract DailyVolumeLimiter is Ownable, IDailyVolumeLimiter {
             return true;
         }
 
-        uint256 _day = block.timestamp / 86400;
-        if (_day != day) {
+        uint256 _day = block.timestamp / 1 days;
+        if (_day != dayMap[_token]) {
             dailyVolumeMap[_token] = 0;
-            day = _day;
+            dayMap[_token] = _day;
         }
 
         if (dailyVolumeMap[_token] + newVolume > limit) {
@@ -48,7 +48,7 @@ contract DailyVolumeLimiter is Ownable, IDailyVolumeLimiter {
     }
 
     function getDailyVolume(address _token) public view returns (uint256) {
-        if (block.timestamp / 86400 != day) {
+        if (block.timestamp / 1 days != dayMap[_token]) {
             return 0;
         }
 
