@@ -69,7 +69,8 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
     }
 
     function extractFee() external onlyFeeCollector {
-        payable(feeCollector).transfer(address(this).balance);
+        (bool success, ) = feeCollector.call{ value: address(this).balance }("");
+        require(success, "unable to send value, recipient may have reverted");
     }
 
     function rescueFund(address tokenAddress) external onlyOwner {
@@ -82,7 +83,7 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         uint256 amount,
         uint64 toChainId,
         bytes memory toAddress,
-        bytes memory callData
+        bytes calldata callData
     ) external payable nonReentrant whenNotPaused returns(bool) {
         // check
         require(toAddress.length != 0, "empty toAddress");
@@ -94,7 +95,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         IERC20(pTokenAddress).safeTransferFrom(_msgSender(), address(this), amount);
 
         // push
-        IERC20(pTokenAddress).safeApprove(bridge, 0);
         IERC20(pTokenAddress).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(pTokenAddress, toChainId, toAddress, amount, callData), "bridgeOut fail");
 
@@ -122,7 +122,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         }
         {
             // swap
-            IERC20(tokenFrom).safeApprove(poolAddress, 0);
             IERC20(tokenFrom).safeApprove(poolAddress, dx);
             IPool pool = IPool(poolAddress);
             pool.swap(pool.getTokenIndex(tokenFrom), pool.getTokenIndex(tokenTo), dx, minDy, deadline);
@@ -130,7 +129,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
 
         // push
         uint256 amount = IERC20(tokenTo).balanceOf(address(this)).sub(balanceBefore);
-        IERC20(tokenTo).safeApprove(bridge, 0);
         IERC20(tokenTo).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "bridgeOut fail");
 
@@ -159,7 +157,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         }
         {
             // swap
-            IERC20(wethAddress).safeApprove(poolAddress, 0);
             IERC20(wethAddress).safeApprove(poolAddress, dx);
             IPool pool = IPool(poolAddress);
             pool.swap(pool.getTokenIndex(wethAddress), pool.getTokenIndex(tokenTo), dx, minDy, deadline);
@@ -167,7 +164,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
 
         // push
         uint256 amount = IERC20(tokenTo).balanceOf(address(this)).sub(balanceBefore);
-        IERC20(tokenTo).safeApprove(bridge, 0);
         IERC20(tokenTo).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOut(tokenTo, toChainId, toAddress, amount, callData), "bridgeOut fail");
 
@@ -199,7 +195,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         }
 
         // push
-        IERC20(originalToken).safeApprove(bridge, 0);
         IERC20(originalToken).safeApprove(bridge, amount);
         require(IBridge(bridge).depositAndBridgeOut(originalToken, pTokenAddress, toChainId, toAddress, amount, callData), "depositAndBridgeOut fail");
 
@@ -231,7 +226,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         }
 
         // push
-        IERC20(wethAddress).safeApprove(bridge, 0);
         IERC20(wethAddress).safeApprove(bridge, amount);
         require(IBridge(bridge).depositAndBridgeOut(wethAddress, pTokenAddress, toChainId, toAddress, amount, callData), "depositAndBridgeOut fail");
 
@@ -257,7 +251,6 @@ contract Wrapper is Ownable, IWrapper, Pausable, ReentrancyGuard {
         IERC20(pTokenAddress).safeTransferFrom(_msgSender(), address(this), amount);
 
         // push
-        IERC20(pTokenAddress).safeApprove(bridge, 0);
         IERC20(pTokenAddress).safeApprove(bridge, amount);
         require(IBridge(bridge).bridgeOutAndWithdraw(pTokenAddress, toChainId, toAddress, amount), "bridgeOutAndWithdraw fail");
 
