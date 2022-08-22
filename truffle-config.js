@@ -183,6 +183,61 @@ const network_fantom_testnet = {
   skipDryRun: false
 };
 
+const cube_mainnet_rpc = 'https://http-mainnet.cube.network';
+const network_cube_mainnet = {
+  provider: () => new HDWalletProvider(privateKey, cube_mainnet_rpc),
+  network_id: 1818,
+  gas: 40 * 10000,
+  gasPrice: 200 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false
+};
+
+const cube_testnet_rpc = 'https://http-testnet.cube.network';
+const network_cube_testnet = {
+  provider: () => new HDWalletProvider(privateKey, cube_testnet_rpc),
+  network_id: 1819,
+  gas: 500 * 10000,
+  gasPrice: 1 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false
+};
+
+const metis_mainnet_rpc = 'https://andromeda.metis.io/?owner=1088';
+const network_metis_mainnet = {
+  provider: () => new HDWalletProvider(privateKey, metis_mainnet_rpc),
+  network_id: 1088,
+  gas: 500 * 10000,
+  gasPrice: 20 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false,
+};
+
+const celo_mainnet_rpc = 'https://forno.celo.org';
+const network_celo_mainnet = {
+  provider: () => new HDWalletProvider(privateKey, celo_mainnet_rpc),
+  network_id: 42220,
+  gas: 400 * 10000,
+  gasPrice: 0.2 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false,
+};
+
+const celo_testnet_rpc = 'https://alfajores-forno.celo-testnet.org';
+const network_celo_testnet = {
+  provider: () => new HDWalletProvider(privateKey, celo_testnet_rpc),
+  network_id: 44787,
+  gas: 500 * 10000,
+  gasPrice: 0.2 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false,
+};
+
 const network_development = {
   host: "127.0.0.1",
   port: 18545,
@@ -201,12 +256,19 @@ const network_development = {
     avalanche: network_avalanche_mainnet,
     optimism: network_optimism_mainnet,
     okc: network_okc_mainnet,
+    cube: network_cube_mainnet,
+    metis: network_metis_mainnet,
+    celo: network_celo_mainnet,
 
     eth_ropsten: network_eth_ropsten,
     bsc_testnet: network_bsc_testnet,
     arbitrum_rinkeby: network_arbitrum_rinkeby,
     fantom_testnet: network_fantom_testnet,
     optimism_testnet: network_optimism_testnet,
+    cube_testnet: network_cube_testnet,
+    celo_testnet: network_celo_testnet,
+
+    development: network_development,
   },
 
   mocha: {
