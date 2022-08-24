@@ -287,13 +287,12 @@ const network_development = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.8.8",
+      version: "0.8.15",
       settings: {
        optimizer: {
          enabled: true,
          runs: 999999
        },
-       evmVersion: "istanbul"
       }
     }
   },
