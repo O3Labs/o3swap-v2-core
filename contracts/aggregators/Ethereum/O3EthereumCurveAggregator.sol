@@ -4,12 +4,16 @@ pragma solidity ^0.8.0;
 
 import "../../access/Ownable.sol";
 import "../../swap/interfaces/IPool.sol";
-import "../interfaces/ICurve.sol";
 import "../../assets/interfaces/IWETH.sol";
 import "../../crossChain/interfaces/IWrapper.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+interface ICurve {
+    function exchange(int128 i, int128 j, uint256 dx, uint256 minDy) external;
+    function coins(uint256 index) external returns (address);
+}
 
 contract O3EthereumCurveAggregator is Ownable {
     using SafeMath for uint256;
@@ -134,7 +138,11 @@ contract O3EthereumCurveAggregator is Ownable {
 
         IERC20(path[0]).safeApprove(curvePoolAddr, amountIn);
         (int128 i, int128 j) = _getPoolTokenIndex(curvePoolAddr, path[0], path[1]);
-        return ICurve(curvePoolAddr).exchange(i, j, amountIn, minDy);
+
+        uint256 balanceBefore = IERC20(path[1]).balanceOf(address(this));
+        ICurve(curvePoolAddr).exchange(i, j, amountIn, minDy);
+
+        return IERC20(path[1]).balanceOf(address(this)) - balanceBefore;
     }
 
     function exchangeTokensForTokens(
