@@ -47,7 +47,10 @@ contract O3Staking is Context, Ownable, ReentrancyGuard {
         _;
     }
 
+    // Only pool LP tokens can be staking token, so the contract
+    // will never be a proxy contract with multiple entry points.
     address public StakingToken;
+
     address public O3Token;
     uint public startStakingBlockTimestamp;
     uint public startUnstakeBlockTimestamp;
