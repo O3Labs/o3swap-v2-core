@@ -6,9 +6,10 @@ import "./LPToken.sol";
 import "../libs/MathUtils.sol";
 import "../access/Ownable.sol";
 import "./interfaces/IPool.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract Pool is IPool, Ownable {
+contract Pool is IPool, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using MathUtils for uint256;
 
@@ -441,7 +442,7 @@ contract Pool is IPool, Ownable {
         return swapFee * coins.length / (4 * (coins.length - 1));
     }
 
-    function swap(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx, uint256 minDy, uint256 deadline) external ensure(deadline) returns (uint256) {
+    function swap(uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx, uint256 minDy, uint256 deadline) external nonReentrant ensure(deadline) returns (uint256) {
         require(dx <= coins[tokenIndexFrom].balanceOf(msg.sender), "O3SwapPool: INSUFFICIENT_BALANCE");
 
         uint256 balanceBefore = coins[tokenIndexFrom].balanceOf(address(this));
@@ -463,7 +464,7 @@ contract Pool is IPool, Ownable {
         return dy;
     }
 
-    function addLiquidity(uint256[] memory amounts, uint256 minToMint, uint256 deadline) external ensure(deadline) returns (uint256) {
+    function addLiquidity(uint256[] memory amounts, uint256 minToMint, uint256 deadline) external nonReentrant ensure(deadline) returns (uint256) {
         require(amounts.length == coins.length, "O3SwapPool: AMOUNTS_COINS_LENGTH_MISMATCH");
 
         uint256[] memory fees = new uint256[](coins.length);
@@ -525,7 +526,7 @@ contract Pool is IPool, Ownable {
         return toMint;
     }
 
-    function removeLiquidity(uint256 amount, uint256[] calldata minAmounts, uint256 deadline) external ensure(deadline) returns (uint256[] memory) {
+    function removeLiquidity(uint256 amount, uint256[] calldata minAmounts, uint256 deadline) external nonReentrant ensure(deadline) returns (uint256[] memory) {
         require(amount <= lpToken.balanceOf(msg.sender), "O3SwapPool: INSUFFICIENT_LP_AMOUNT");
         require(minAmounts.length == coins.length, "O3SwapPool: AMOUNTS_COINS_LENGTH_MISMATCH");
 
@@ -544,7 +545,7 @@ contract Pool is IPool, Ownable {
         return amounts;
     }
 
-    function removeLiquidityOneToken(uint256 tokenAmount, uint8 tokenIndex, uint256 minAmount, uint256 deadline) external ensure(deadline) returns (uint256) {
+    function removeLiquidityOneToken(uint256 tokenAmount, uint8 tokenIndex, uint256 minAmount, uint256 deadline) external nonReentrant ensure(deadline) returns (uint256) {
         uint256 numTokens = coins.length;
 
         require(tokenAmount <= lpToken.balanceOf(msg.sender), "O3SwapPool: INSUFFICIENT_LP_AMOUNT");
@@ -566,7 +567,7 @@ contract Pool is IPool, Ownable {
         return dy;
     }
 
-    function removeLiquidityImbalance(uint256[] calldata amounts, uint256 maxBurnAmount, uint256 deadline) external ensure(deadline) returns (uint256) {
+    function removeLiquidityImbalance(uint256[] calldata amounts, uint256 maxBurnAmount, uint256 deadline) external nonReentrant ensure(deadline) returns (uint256) {
         require(amounts.length == coins.length, "O3SwapPool: AMOUNTS_COINS_LENGTH_MISMATCH");
         require(maxBurnAmount <= lpToken.balanceOf(msg.sender) && maxBurnAmount != 0, "O3SwapPool: INSUFFICIENT_LP_AMOUNT");
 
