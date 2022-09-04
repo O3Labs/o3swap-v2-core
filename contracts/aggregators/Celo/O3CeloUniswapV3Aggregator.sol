@@ -66,7 +66,6 @@ contract O3CeloUniswapV3Aggregator is Ownable {
 
     function exactInputSinglePToken(
         uint256 amountIn,
-        address callproxy,
         address poolAddress,
         uint poolAmountOutMin,
         address[] calldata path,
@@ -76,17 +75,12 @@ contract O3CeloUniswapV3Aggregator is Ownable {
         uint aggSwapAmountOutMin,
         bool unwrapETH
     ) external ensure(deadline) {
-        {
-            address caller = _msgSender();
-
-            if (callproxy != address(0) && amountIn == 0) {
-                amountIn = IERC20(path[0]).allowance(callproxy, address(this));
-                caller = callproxy;
-            }
-
-            require(amountIn != 0, 'O3Aggregator: ZERO_AMOUNT_IN');
-            IERC20(path[0]).safeTransferFrom(caller, address(this), amountIn);
+        if (amountIn == 0) {
+            amountIn = IERC20(path[0]).allowance(_msgSender(), address(this));
         }
+
+        require(amountIn != 0, 'O3Aggregator: ZERO_AMOUNT_IN');
+        IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
 
         IERC20(path[0]).safeApprove(poolAddress, amountIn);
         amountIn = IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);

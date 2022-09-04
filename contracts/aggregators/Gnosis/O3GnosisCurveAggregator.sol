@@ -24,7 +24,7 @@ contract O3GnosisCurveAggregator is Ownable {
     address public O3Wrapper = 0x426223eef2e4f577767533aa1854E8b980b1Df5F;
     address public feeCollector;
 
-    uint256 public aggregatorFee = 1 * 10 ** 6;
+    uint256 public aggregatorFee = 1 * 10**6;
     uint256 public constant FEE_DENOMINATOR = 10 ** 10;
     uint256 private constant MAX_AGGREGATOR_FEE = 5 * 10**8;
 
@@ -66,14 +66,12 @@ contract O3GnosisCurveAggregator is Ownable {
     }
 
     function exchangePTokensForTokens(
-        uint256 amountIn, address callproxy,
-        address ptokenAddr, address ptokenPoolAddr, uint256 ptokenPoolMinDy,
+        uint256 amountIn, address ptokenAddr, address ptokenPoolAddr, uint256 ptokenPoolMinDy,
         address curvePoolAddr, address[] calldata path, uint256 curvePoolMinDy,
         address toAddress, uint256 deadline, bool unwrapETH
     ) external virtual ensure(deadline) {
         uint256 amountOut = _exchangePTokensForTokens(
-            amountIn, callproxy, deadline,
-            ptokenAddr, ptokenPoolAddr, ptokenPoolMinDy,
+            amountIn, deadline, ptokenAddr, ptokenPoolAddr, ptokenPoolMinDy,
             curvePoolAddr, path, curvePoolMinDy
         );
 
@@ -92,16 +90,15 @@ contract O3GnosisCurveAggregator is Ownable {
     }
 
     function _exchangePTokensForTokens(
-        uint256 amountIn, address callproxy, uint256 deadline,
+        uint256 amountIn, uint256 deadline,
         address ptokenAddr, address ptokenPoolAddr, uint256 ptokenPoolMinDy,
         address curvePoolAddr, address[] calldata path, uint256 curvePoolMinDy
     ) internal returns (uint256) {
-        if (callproxy != address(0) && amountIn == 0) {
-            amountIn = IERC20(ptokenAddr).allowance(callproxy, address(this));
-            IERC20(ptokenAddr).safeTransferFrom(callproxy, address(this), amountIn);
-        } else {
-            IERC20(ptokenAddr).safeTransferFrom(_msgSender(), address(this), amountIn);
+        if (amountIn == 0) {
+            amountIn = IERC20(ptokenAddr).allowance(_msgSender(), address(this));
         }
+
+        IERC20(ptokenAddr).safeTransferFrom(_msgSender(), address(this), amountIn);
 
         uint256 curveAmountIn = _ptokenSwap(
             amountIn, ptokenAddr, ptokenPoolAddr, ptokenPoolMinDy, deadline

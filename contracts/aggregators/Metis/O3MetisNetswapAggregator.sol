@@ -78,7 +78,6 @@ contract O3MetisNetswapAggregator is Ownable {
 
     function swapExactPTokensForTokensSupportingFeeOnTransferTokens(
         uint256 amountIn,
-        address callproxy,
         address poolAddress,
         uint poolAmountOutMin,
         address[] calldata path,
@@ -87,15 +86,12 @@ contract O3MetisNetswapAggregator is Ownable {
         uint aggSwapAmountOutMin,
         bool unwrapETH
     ) external virtual ensure(deadline) {
-        address caller = _msgSender();
-
-        if (callproxy != address(0) && amountIn == 0) {
-            amountIn = IERC20(path[0]).allowance(callproxy, address(this));
-            caller = callproxy;
+        if (amountIn == 0) {
+            amountIn = IERC20(path[0]).allowance(_msgSender(), address(this));
         }
 
-        require(amountIn != 0, "O3Aggregator: amountIn cannot be zero");
-        IERC20(path[0]).safeTransferFrom(caller, address(this), amountIn);
+        require(amountIn != 0, 'O3Aggregator: ZERO_AMOUNT_IN');
+        IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
 
         IERC20(path[0]).safeApprove(poolAddress, amountIn);
         amountIn = IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);

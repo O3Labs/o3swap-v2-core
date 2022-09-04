@@ -68,22 +68,16 @@ contract O3OptimismVelodromeAggregator is Ownable {
     }
 
     function swapExactPTokensForTokens(
-        uint256 amountIn, address callproxy,
-        address poolAddress, uint poolAmountOutMin, address ptoken,
+        uint256 amountIn, address poolAddress, uint poolAmountOutMin, address ptoken,
         IVelodromeRouter.route[] calldata routes,
         address to, uint deadline, uint aggSwapAmountOutMin, bool unwrapETH
     ) external virtual ensure(deadline) {
-        {
-            address caller = _msgSender();
-
-            if (callproxy != address(0) && amountIn == 0) {
-                amountIn = IERC20(ptoken).allowance(callproxy, address(this));
-                caller = callproxy;
-            }
-
-            require(amountIn != 0, "O3Aggregator: amountIn cannot be zero");
-            IERC20(ptoken).safeTransferFrom(caller, address(this), amountIn);
+        if (amountIn == 0) {
+            amountIn = IERC20(ptoken).allowance(_msgSender(), address(this));
         }
+
+        require(amountIn != 0, "O3Aggregator: amountIn cannot be zero");
+        IERC20(ptoken).safeTransferFrom(_msgSender(), address(this), amountIn);
 
         IERC20(ptoken).safeApprove(poolAddress, amountIn);
         amountIn = IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
