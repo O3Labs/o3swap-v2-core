@@ -117,6 +117,7 @@ contract CallProxy is ICallProxy, Ownable {
         } else if (externalCallEnabled && tag == 0x03) { // external call
             try this.decodeCallDataForExternalCall(callData) returns(address callee, bytes memory data) {
                 // approve ptoken
+                IERC20(ptoken).safeApprove(callee, 0);
                 IERC20(ptoken).safeApprove(callee, amount);
 
                 // do external call
@@ -134,6 +135,7 @@ contract CallProxy is ICallProxy, Ownable {
 
     function _swap(address poolAddress, uint8 tokenIndexFrom, uint8 tokenIndexTo, uint256 dx, uint256 minDy, uint256 deadline) internal returns(uint256 dy) {
         IERC20 tokenFrom = IERC20(IPool(poolAddress).coins(tokenIndexFrom));
+        tokenFrom.safeApprove(poolAddress, 0);
         tokenFrom.safeApprove(poolAddress, dx);
         try IPool(poolAddress).swap(tokenIndexFrom, tokenIndexTo, dx, minDy, deadline) returns(uint256 _dy) {
             dy = _dy;
