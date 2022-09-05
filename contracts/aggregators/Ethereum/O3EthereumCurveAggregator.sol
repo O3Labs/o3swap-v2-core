@@ -217,6 +217,7 @@ contract O3EthereumCurveAggregator is Ownable {
         uint256 amountIn = msg.value;
         IWETH(WETH).deposit{value: amountIn}();
 
+        require(path[0] == WETH, 'O3Aggregator: INVALID_PATH');
         uint256 amountOut = _curveSwap(curvePoolAddr, amountIn, path, minDy);
         uint256 feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
         emit LOG_AGG_SWAP(amountOut, feeAmount);
@@ -232,6 +233,7 @@ contract O3EthereumCurveAggregator is Ownable {
     ) external payable ensure(deadline) {
         IWETH(WETH).deposit{value: msg.value.sub(fee)}();
 
+        require(path[0] == WETH, 'O3Aggregator: INVALID_PATH');
         uint256 crossChainAmount = _exchangeTokensForTokensCrossChain(
             msg.value.sub(fee), curvePoolAddr, curvePoolMinDy, path
         );
@@ -252,7 +254,7 @@ contract O3EthereumCurveAggregator is Ownable {
         address toAddress,
         uint256 deadline
     ) external ensure(deadline) {
-        require(path[1] == WETH, 'O3Aggregator: INVALID_POOL');
+        require(path[1] == WETH, 'O3Aggregator: INVALID_PATH');
 
         IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
 
