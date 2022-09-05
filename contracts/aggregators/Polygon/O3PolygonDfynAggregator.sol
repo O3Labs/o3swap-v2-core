@@ -20,7 +20,7 @@ contract O3PolygonDfynAggregator is Ownable {
         uint256 fee
     );
 
-    address public WETH = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    address public WETH = 0x4c28f48448720e9000907BC2611F73022fdcE1fA;
     address public factory = 0xE7Fb3e833eFE5F9c441105EB65Ef8b261266423B;
     address public O3Wrapper = 0xa9472DA7e5F349A59C074E059ef0Ab504735dfA2;
     address public feeCollector;
