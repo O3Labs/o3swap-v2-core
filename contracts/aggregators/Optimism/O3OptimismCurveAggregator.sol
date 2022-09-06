@@ -100,10 +100,11 @@ contract O3OptimismCurveAggregator is Ownable {
 
         IERC20(ptokenAddr).safeTransferFrom(_msgSender(), address(this), amountIn);
 
-        uint256 curveAmountIn = _ptokenSwap(
+        (address underlyingToken, uint256 curveAmountIn) = _ptokenSwap(
             amountIn, ptokenAddr, ptokenPoolAddr, ptokenPoolMinDy, deadline
         );
 
+        require(underlyingToken == path[0], "O3Aggregator: INVALID_PATH");
         return _curveSwap(curvePoolAddr, curveAmountIn, path, curvePoolMinDy);
     }
 
@@ -113,11 +114,15 @@ contract O3OptimismCurveAggregator is Ownable {
         address ptokenPoolAddr,
         uint256 minDy,
         uint256 deadline
-    ) internal returns (uint256) {
+    ) internal returns (address, uint256) {
         require(amountIn != 0, "O3Aggregator: amountIn cannot be zero");
 
+        address underlyingToken = address(IPool(ptokenPoolAddr).coins(0));
+        uint256 balanceBefore = IERC20(underlyingToken).balanceOf(address(this));
         IERC20(ptokenAddr).safeApprove(ptokenPoolAddr, amountIn);
-        return IPool(ptokenPoolAddr).swap(1, 0, amountIn, minDy, deadline);
+        IPool(ptokenPoolAddr).swap(1, 0, amountIn, minDy, deadline);
+
+        return (underlyingToken, IERC20(underlyingToken).balanceOf(address(this)) - balanceBefore);
     }
 
     function _curveSwap(
@@ -131,7 +136,12 @@ contract O3OptimismCurveAggregator is Ownable {
 
         IERC20(path[0]).safeApprove(curvePoolAddr, amountIn);
         (int128 i, int128 j) = _getPoolTokenIndex(curvePoolAddr, path[0], path[1]);
-        return ICurve(curvePoolAddr).exchange(i, j, amountIn, minDy);
+
+        address toToken = ICurve(curvePoolAddr).coins(uint256(int256(j)));
+        uint256 balanceBefore = IERC20(toToken).balanceOf(address(this));
+        ICurve(curvePoolAddr).exchange(i, j, amountIn, minDy);
+
+        return IERC20(toToken).balanceOf(address(this)) - balanceBefore;
     }
 
     function exchangeTokensForTokens(
