@@ -82,8 +82,14 @@ contract O3EthereumUniswapV3Aggregator is Ownable {
         require(amountIn != 0, 'O3Aggregator: ZERO_AMOUNT_IN');
         IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
 
-        IERC20(path[0]).safeApprove(poolAddress, amountIn);
-        amountIn = IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
+        {
+            IERC20(path[0]).safeApprove(poolAddress, amountIn);
+            require(address(IPool(poolAddress).coins(0)) == path[1], "O3Aggregator: INVALID_PATH");
+
+            uint balanceBefore = IERC20(path[1]).balanceOf(address(this));
+            IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
+            amountIn = IERC20(path[1]).balanceOf(address(this)) - balanceBefore;
+        }
 
         require(path.length >= 3, 'O3Aggregator: INVALID_PATH');
         IUniswapV3SwapRouter.ExactInputSingleParams memory params = IUniswapV3SwapRouter.ExactInputSingleParams(
@@ -138,7 +144,9 @@ contract O3EthereumUniswapV3Aggregator is Ownable {
         params.recipient = address(this);
 
         IERC20(params.tokenIn).safeApprove(router, params.amountIn);
-        uint amountOut = IUniswapV3SwapRouter(router).exactInputSingle(params);
+        uint balanceBefore = IERC20(params.tokenOut).balanceOf(address(this));
+        IUniswapV3SwapRouter(router).exactInputSingle(params);
+        uint amountOut = IERC20(params.tokenOut).balanceOf(address(this)) - balanceBefore;
         uint feeAmount = amountOut * params.fee / 1000000;
         emit LOG_AGG_SWAP(amountOut, feeAmount);
 

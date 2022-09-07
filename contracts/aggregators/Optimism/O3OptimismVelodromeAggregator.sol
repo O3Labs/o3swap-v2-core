@@ -79,8 +79,15 @@ contract O3OptimismVelodromeAggregator is Ownable {
         require(amountIn != 0, "O3Aggregator: amountIn cannot be zero");
         IERC20(ptoken).safeTransferFrom(_msgSender(), address(this), amountIn);
 
-        IERC20(ptoken).safeApprove(poolAddress, amountIn);
-        amountIn = IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
+        {
+            IERC20(ptoken).safeApprove(poolAddress, amountIn);
+            require(address(IPool(poolAddress).coins(0)) == routes[0].from, "O3Aggregator: INVALID_PATH");
+
+            uint balanceBefore = IERC20(routes[0].from).balanceOf(address(this));
+            IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
+            amountIn = IERC20(routes[0].from).balanceOf(address(this)) - balanceBefore;
+        }
+
         (uint amountOut, uint feeAmount) = _swapExactTokensForTokens(
             amountIn, aggSwapAmountOutMin, routes, deadline
         );
@@ -147,11 +154,12 @@ contract O3OptimismVelodromeAggregator is Ownable {
         uint amountIn, uint amountOutMin, IVelodromeRouter.route[] calldata routes, uint deadline
     ) internal virtual returns (uint, uint) {
         IERC20(routes[0].from).safeApprove(router, amountIn);
-        uint[] memory amounts = IVelodromeRouter(router).swapExactTokensForTokens(
+
+        uint balanceBefore = IERC20(routes[routes.length-1].to).balanceOf(address(this));
+        IVelodromeRouter(router).swapExactTokensForTokens(
             amountIn, amountOutMin, routes, address(this), deadline
         );
-
-        uint amountOut = amounts[amounts.length-1];
+        uint amountOut = IERC20(routes[routes.length-1].to).balanceOf(address(this)) - balanceBefore;
         uint feeAmount = amountOut * aggregatorFee / FEE_DENOMINATOR;
 
         emit LOG_AGG_SWAP(amountOut, feeAmount);

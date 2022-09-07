@@ -89,8 +89,16 @@ contract O3ArbitrumSushiAggregator is Ownable {
         require(amountIn != 0, 'O3Aggregator: ZERO_AMOUNT_IN');
         IERC20(path[0]).safeTransferFrom(_msgSender(), address(this), amountIn);
 
-        IERC20(path[0]).safeApprove(poolAddress, amountIn);
-        amountIn = IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
+        {
+            IERC20(path[0]).safeApprove(poolAddress, amountIn);
+            address underlyingToken = address(IPool(poolAddress).coins(0));
+
+            uint256 balanceBefore = IERC20(underlyingToken).balanceOf(address(this));
+            IPool(poolAddress).swap(1, 0, amountIn, poolAmountOutMin, deadline);
+            amountIn = IERC20(underlyingToken).balanceOf(address(this)) - balanceBefore;
+
+            require(address(underlyingToken) == path[1], "O3Aggregator: INVALID_PATH");
+        }
 
         uint amountOut = _swapExactTokensForTokensSupportingFeeOnTransferTokens(false, amountIn, aggSwapAmountOutMin, path[1:]);
         uint feeAmount = amountOut.mul(aggregatorFee).div(FEE_DENOMINATOR);
