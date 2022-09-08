@@ -116,7 +116,7 @@ contract O3Staking is Context, Ownable, ReentrancyGuard {
         return _sharePerSecond;
     }
 
-    function setStakingToke(address _token) external onlyOwner _logs_ {
+    function setStakingToken(address _token) external onlyOwner _logs_ {
         StakingToken = _token;
     }
 
