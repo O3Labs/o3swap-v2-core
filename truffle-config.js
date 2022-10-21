@@ -238,6 +238,17 @@ const network_celo_testnet = {
   skipDryRun: false,
 };
 
+const kcc_mainnet_rpc = 'https://rpc-mainnet.kcc.network';
+const network_kcc_mainnet = {
+  provider: () => new HDWalletProvider(privateKey, kcc_mainnet_rpc),
+  network_id: 321,
+  gas: 50 * 10000,
+  gasPrice: 1.5 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false,
+};
+
 const network_development = {
   host: "127.0.0.1",
   port: 18545,
@@ -259,6 +270,7 @@ const network_development = {
     cube: network_cube_mainnet,
     metis: network_metis_mainnet,
     celo: network_celo_mainnet,
+    kcc: network_kcc_mainnet,
 
     eth_ropsten: network_eth_ropsten,
     bsc_testnet: network_bsc_testnet,
