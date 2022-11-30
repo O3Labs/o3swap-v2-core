@@ -249,6 +249,17 @@ const network_kcc_mainnet = {
   skipDryRun: false,
 };
 
+const astar_mainnet_rpc = 'https://evm.astar.network';
+const network_astar_mainnet = {
+  provider: () => new HDWalletProvider(privateKey, astar_mainnet_rpc),
+  network_id: 592,
+  gas: 50 * 10000,
+  gasPrice: 3 * 10**9,
+  confirmations: 0,
+  timeoutBlocks: 200,
+  skipDryRun: false,
+};
+
 const network_development = {
   host: "127.0.0.1",
   port: 18545,
@@ -271,6 +282,7 @@ const network_development = {
     metis: network_metis_mainnet,
     celo: network_celo_mainnet,
     kcc: network_kcc_mainnet,
+    astar: network_astar_mainnet,
 
     eth_ropsten: network_eth_ropsten,
     bsc_testnet: network_bsc_testnet,
