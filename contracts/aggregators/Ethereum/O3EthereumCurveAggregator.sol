@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-interface ICurve {
+interface IEthereumCurve {
     function exchange(int128 i, int128 j, uint256 dx, uint256 minDy) external;
     function coins(uint256 index) external returns (address);
 }
@@ -141,9 +141,9 @@ contract O3EthereumCurveAggregator is Ownable {
         IERC20(path[0]).safeApprove(curvePoolAddr, amountIn);
         (int128 i, int128 j) = _getPoolTokenIndex(curvePoolAddr, path[0], path[1]);
 
-        address toToken = ICurve(curvePoolAddr).coins(uint256(int256(j)));
+        address toToken = IEthereumCurve(curvePoolAddr).coins(uint256(int256(j)));
         uint256 balanceBefore = IERC20(toToken).balanceOf(address(this));
-        ICurve(curvePoolAddr).exchange(i, j, amountIn, minDy);
+        IEthereumCurve(curvePoolAddr).exchange(i, j, amountIn, minDy);
 
         return IERC20(toToken).balanceOf(address(this)) - balanceBefore;
     }
@@ -289,7 +289,7 @@ contract O3EthereumCurveAggregator is Ownable {
         bytes1 found = 0x00;
 
         for (uint256 idx = 0; idx < 8; idx++) {
-            address coin = ICurve(curvePoolAddr).coins(idx);
+            address coin = IEthereumCurve(curvePoolAddr).coins(idx);
             if (coin == fromToken) {
                 i = int128(int256(idx));
                 found |= bytes1(uint8(0x1));
