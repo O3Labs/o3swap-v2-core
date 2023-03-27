@@ -129,7 +129,9 @@ contract O3EthereumUniswapV3Aggregator is Ownable {
     }
 
     function _pull(address token, uint amountIn, uint netFee) internal {
-        if (msg.value - netFee > 0) {
+        require(msg.value >= netFee, "O3Aggregator: invalid netFee");
+
+        if (msg.value > netFee) {
             require(token == WETH, 'O3Aggregator: INVALID_TOKEN_IN');
             IWETH(WETH).deposit{value: msg.value - netFee}();
         } else {
