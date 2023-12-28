@@ -7,6 +7,20 @@
 !.vscode/extensions.json
 ### Eclipse template
 
+# Project specific
+.private_key
+cache
+artifacts
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+rsync.sh
+generate_abi.sh
+build
+note.md
+
 .metadata
 tmp/
 *.tmp
